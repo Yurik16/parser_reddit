@@ -9,12 +9,25 @@ HEADERS = {
 
 
 def get_html(url, page=None):
+    """Getting html from constant with needs HEADERS as request"""
     return requests.get(url, params=page, headers=HEADERS)
 
 
+def get_content(html):
+    """Make a text out of html"""
+    soup = BeautifulSoup(html, 'html.parser')
+    elem = soup.find('div', class_="cZPZhMe-UCZ8htPodMyJ5")
+    post = elem.find_all('a')
+    print(post)
+
+
 def parse():
+    """Make parsing"""
     html = get_html(URL)
-    print(html.status_code)
+    if html.status_code == 200:
+        get_content(html.text)
+    else:
+        print("Please check URL or HEADERS")
 
 
 parse()

@@ -1,9 +1,11 @@
 import pprint
-
 import requests
+import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
-import time
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 
 URL = 'https://www.reddit.com/top/?t=month'
 HEADERS = {
@@ -25,15 +27,21 @@ def get_content(html):
     soup = BeautifulSoup(html, 'html.parser')
     elem = soup.find_all('div', class_="_1RYN-7H8gYctjOQeL8p2Q7")
     for post in elem:
-        my_lib.append({
-            "username": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
-            "post category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
-            "post date": post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text,
-            "Number of comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text,
-            "post karma": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
-        })
+        try:
+            my_lib.append({
+                "username": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
+                "post category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
+                "post date": post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text,
+                "Number of comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text,
+                "post karma": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
+            })
+        except AttributeError:
+            print("Data error")
 
     pprint.pprint(my_lib)
+    print(len(my_lib))
+    # elements = driver.find_elements_by_xpath("//div[@name ='style']")
+    # print(len(elements))
 
 
 def parse():
@@ -48,6 +56,10 @@ def parse():
 def drv_parse():
     driver.get(url=URL)
     time.sleep(5)
+    actions = ActionChains(driver)
+    for _ in range(40):
+        element = driver.find_element(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
+        actions.move_to_element(element).perform()
     drv_html = driver.page_source
     get_content(drv_html)
 

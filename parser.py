@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import json
 
 URL = 'https://www.reddit.com/top/?t=month'
 HEADERS = {
@@ -43,6 +44,11 @@ def get_content(html):
 
     pprint.pprint(my_lib)
     print(len(my_lib))
+
+
+def get_users_name(lib: list) -> list:
+    """Make users links list """
+    return [elem["user_link"][6:-2] for elem in lib]
 
 
 def get_users_links_list(lib: list) -> list:
@@ -84,8 +90,10 @@ def parse_user_list(lib: list):
             soup = BeautifulSoup(html, 'html.parser')
             user_div = soup.find('div', class_='_3Im6OD67aKo33nql4FpSp_')
             try:
-                users_page[f'{el[28:-1]} user'] = user_div.find('span', class_='_28nEhn86_R1ENZ59eAru8S').text.split(' ')[0][2::]
-                users_page[f'{el[28:-1]} karma'] = user_div.find('span', id='profile--id-card--highlight-tooltip--karma').text
+                users_page[f'{el[28:-1]} user'] = \
+                    user_div.find('span', class_='_28nEhn86_R1ENZ59eAru8S').text.split(' ')[0][2::]
+                users_page[f'{el[28:-1]} karma'] = user_div.find('span',
+                                                                 id='profile--id-card--highlight-tooltip--karma').text
                 # user_page["cake day"] = user_div.find_next('span', class_='_3KNaG9-PoXf4gcuy5_RCVy').text
             except AttributeError:
                 print("Data error")
@@ -94,6 +102,25 @@ def parse_user_list(lib: list):
     pprint.pprint(users_page)
 
 
+def get_users_data_from_json(lib: list):
+    users_data = []
+    for name in lib:
+        url = f'https://www.reddit.com/user/{name}/about.json?redditWebClient=web2x&app=web2x-client-production&gilding_detail=1&awarded_detail=1&raw_json=1'
+        r = requests.get(url)
+        user_json = r.json()
+        if user_json["data"]:
+            users_data.append({
+                "name": user_json["name"],
+                "total_karma": user_json["total_karma"],
+                "comment_karma": user_json["comment_karma"],
+                "cake_day": datetime.fromtimestamp(user_json["created"])
+            })
+        # users_data.append(url)
+    return users_data
+
+
 drv_parse()
+users_name_plus = get_users_name(my_lib)
 ull = get_users_links_list(my_lib)
-parse_user_list(ull)
+users_data_list = get_users_data_from_json(users_name_plus)
+pprint.pprint(users_data_list)

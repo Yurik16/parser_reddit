@@ -43,11 +43,12 @@ def get_content_from_main_page(html):
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
             })
             parse_user_list(unique_id)
-            print(unique_id, ":", my_lib[unique_id])
-        except AttributeError:
-            print("Data error - Post is restricted")
+            pprint.pprint(f'{unique_id}->{my_lib[unique_id]}')
+        except AttributeError as e:
+            print(e)
         except KeyError:
             print("Key error")
+
     print(len(my_lib))
 
 
@@ -61,12 +62,10 @@ def parse_user_list(u_id: str) -> None:
     soup = BeautifulSoup(html, 'html.parser')
     user_div = soup.find('div', class_='_3Im6OD67aKo33nql4FpSp_')
     try:
-        my_lib[u_id].append({
-            "karma": user_div.find_next('span', id='profile--id-card--highlight-tooltip--karma').text,
-            "cake day": user_div.find_next('span', id='profile--id-card--highlight-tooltip--cakeday').text,
-        })
+        my_lib[u_id][0]["karma"] = user_div.find_next('span', id='profile--id-card--highlight-tooltip--karma').text
+        my_lib[u_id][0]["cake_day"] = user_div.find_next('span', id='profile--id-card--highlight-tooltip--cakeday').text
     except AttributeError:
-        print("Data error - Users data is restricted")
+        raise AttributeError("Data error - Users data is restricted")
 
 
 def get_users_links_list(lib: list) -> list:
@@ -78,7 +77,7 @@ def drv_parse() -> None:
     """Make parsing with Chrome"""
     driver.get(url=URL)
     time.sleep(5)
-    for _ in range(2):
+    for _ in range(5):
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
         time.sleep(3)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')

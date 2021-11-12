@@ -42,7 +42,7 @@ def get_content_from_main_page(html):
                 "user_link": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE')['href'],
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
             })
-            parse_user_list(unique_id)
+            parse_user_data(unique_id)
             pprint.pprint(f'{unique_id}->{my_lib[unique_id]}')
         except AttributeError as e:
             print(e)
@@ -52,8 +52,12 @@ def get_content_from_main_page(html):
     print(len(my_lib))
 
 
-def parse_user_list(u_id: str) -> None:
-    """Make a data dict out of users page"""
+def parse_user_data(u_id: str) -> None:
+    """
+    Make a data dict out of users page
+    :param u_id: Unique id made by uuid
+    :return: None
+    """
     link = my_lib[u_id][0]["user_link"]
     el = f'https://www.reddit.com{link}'
     print(el)
@@ -69,7 +73,11 @@ def parse_user_list(u_id: str) -> None:
 
 
 def get_users_links_list(lib: list) -> list:
-    """Make users links list """
+    """
+    Make users links list
+    :param lib: list of dicts with post data
+    :return: list of links on users page
+    """
     return [f'https://www.reddit.com{elem["user_link"]}' for elem in lib]
 
 

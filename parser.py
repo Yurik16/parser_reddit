@@ -1,3 +1,4 @@
+import json
 import pprint
 import requests
 import time
@@ -17,6 +18,8 @@ HEADERS = {
 
 driver = webdriver.Chrome()
 now_day = datetime.today()
+
+# dict with result data from web
 my_lib = defaultdict(list)
 
 
@@ -43,11 +46,12 @@ def get_content_from_main_page(html):
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
             })
             parse_user_data(unique_id)
-            pprint.pprint(f'{unique_id}->{my_lib[unique_id]}')
         except AttributeError as e:
+            del my_lib[unique_id]
             print(e)
         except KeyError:
             print("Key error")
+        # pprint.pprint(f'{unique_id}->{my_lib[unique_id]}')
 
     print(len(my_lib))
 
@@ -85,7 +89,7 @@ def drv_parse() -> None:
     """Make parsing with Chrome"""
     driver.get(url=URL)
     time.sleep(5)
-    for _ in range(5):
+    for _ in range(2):
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
         time.sleep(3)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
@@ -94,4 +98,16 @@ def drv_parse() -> None:
     get_content_from_main_page(drv_html)
 
 
+def get_txt_file(l: dict) -> None:
+    """
+    Convert result dict to txt
+    :param l: result dict with parsing data
+    :return: None
+    """
+    time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
+    with open(f'reddit-{time_str}.txt', 'w') as file:
+        file.write(json.dumps(l))
+
+
 drv_parse()
+get_txt_file(my_lib)

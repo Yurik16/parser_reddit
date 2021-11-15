@@ -1,6 +1,5 @@
 import json
 from datetime import datetime, timedelta
-import pprint
 import requests
 import time
 import uuid
@@ -116,15 +115,30 @@ def drv_parse() -> None:
     get_content_from_main_page(drv_html)
 
 
-def get_txt_file(l: dict) -> None:
+def get_txt_file(data: dict) -> None:
     """
     Convert result dict to txt
-    :param l: result dict with parsing data
+    :param data: result dict with parsing data
     :return: None
     """
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
+    result_list = []
+    # result_dict = json.dumps(data)
+    for key, val in data.items():
+        result_list.append(f'UNIQUE_ID - {key};' +
+                           f' post URL - https://www.reddit.com/{val[0]["post_link"]};' +
+                           f' username - {val[0]["username"]};' +
+                           f' user karma - {val[0]["total_karma"]};' +
+                           f' user cake day - {val[0]["cake_day"]};' +
+                           f' post karma - {val[0]["link_karma"]};' +
+                           f' comment karma - {val[0]["comment_karma"]};' +
+                           f' post date - {val[0]["post_date"]};' +
+                           f' number of comments - {val[0]["Number_of_comments"]};' +
+                           f' number of votes - {val[0]["post_votes"]};' +
+                           f' post category - {val[0]["post_category"]}'
+                           )
     with open(f'reddit-{time_str}.txt', 'w') as file:
-        file.write(json.dumps(l))
+        file.write("\n".join(str(item) for item in result_list))
 
 
 drv_parse()

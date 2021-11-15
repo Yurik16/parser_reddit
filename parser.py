@@ -1,10 +1,9 @@
 import json
-import pprint
+from datetime import datetime, timedelta
 import requests
 import time
 import uuid
 
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -21,6 +20,8 @@ now_day = datetime.today()
 
 # dict with result data from web
 my_lib = defaultdict(list)
+# number of parsing posts
+num_of_parsing_posts = 100
 
 
 def get_html(url, page=None):
@@ -39,19 +40,21 @@ def get_content_from_main_page(html):
                 "username": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
                 "post_category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
                 "post_date": (now_day - timedelta(
-                    int(post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text.split(' ')[0]))).strftime('%Y-%m-%d'),
+                    int(post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text.split(' ')[0]))).strftime('%Y/%m/%d'),
                 "Number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
                 "post_votes": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
                 "user_link": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE')['href'],
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
             })
-            parse_user_data(unique_id)
+            get_users_data_from_json(unique_id)
         except AttributeError as e:
+            # Catch errors (if Live Stream or 18+) and exclude that unit from result data
+            print(e or "Data error - Post data incorrect")
             del my_lib[unique_id]
-            print(e)
         except KeyError:
-            print("Key error")
-        # pprint.pprint(f'{unique_id}->{my_lib[unique_id]}')
+            print(e or "Key Error - Post data incorrect")
+            del my_lib[unique_id]
+        print(round(float(len(my_lib)/(num_of_parsing_posts + 20) * 100), 2), "%")
 
     print(len(my_lib))
 
@@ -73,6 +76,27 @@ def parse_user_data(u_id: str) -> None:
         my_lib[u_id][0]["karma"] = user_div.find_next('span', id='profile--id-card--highlight-tooltip--karma').text
         my_lib[u_id][0]["cake_day"] = user_div.find_next('span', id='profile--id-card--highlight-tooltip--cakeday').text
     except AttributeError:
+        # Catch errors (content 18+) and throw it to next exception
+        raise AttributeError("Data error - Users data is restricted")
+
+
+def get_users_data_from_json(u_id: str):
+    """
+    Getting users data from json response by making myself request
+    :param u_id: uuid
+    """
+    name = my_lib[u_id][0]["username"]
+    url = f'https://www.reddit.com/user/{name}/about.json?'
+    r = requests.get(url, params=None, headers=HEADERS)
+    user_json = r.json()
+    try:
+        my_lib[u_id][0]["total_karma"] = user_json["data"]["total_karma"]
+        my_lib[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
+        my_lib[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
+        my_lib[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime('%Y/%m/%d %H:%M')
+    except AttributeError:
+        raise AttributeError("Data error - Users data is restricted")
+    except KeyError:
         raise AttributeError("Data error - Users data is restricted")
 
 
@@ -89,24 +113,42 @@ def drv_parse() -> None:
     """Make parsing with Chrome"""
     driver.get(url=URL)
     time.sleep(5)
-    for _ in range(2):
+    elem_counter = 0
+    while elem_counter < num_of_parsing_posts + 20:
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-        time.sleep(3)
+        time.sleep(2)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
-        print("Results count: %d" % len(elements))
+        elem_counter = len(elements)
+        print("Results count: %d" % elem_counter)
     drv_html = driver.page_source
     get_content_from_main_page(drv_html)
 
 
-def get_txt_file(l: dict) -> None:
+def get_txt_file(data: dict) -> None:
     """
     Convert result dict to txt
-    :param l: result dict with parsing data
+    :param data: result dict with parsing data
     :return: None
     """
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
-    with open(f'reddit-{time_str}.txt', 'w') as file:
-        file.write(json.dumps(l))
+    result_list = []
+    # result_dict = json.dumps(data)
+    for key, val in data.items():
+        if len(result_list) < num_of_parsing_posts:
+            result_list.append(f'{key};' +
+                               f' https://www.reddit.com/{val[0]["post_link"]};' +
+                               f' {val[0]["username"]};' +
+                               f' {val[0]["total_karma"]};' +
+                               f' {val[0]["cake_day"]};' +
+                               f' {val[0]["link_karma"]};' +
+                               f' {val[0]["comment_karma"]};' +
+                               f' {val[0]["post_date"]};' +
+                               f' {val[0]["Number_of_comments"]};' +
+                               f' {val[0]["post_votes"]};' +
+                               f' {val[0]["post_category"]}'
+                               )
+    with open(f'reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
+        file.write("\n".join(result_list))
 
 
 drv_parse()

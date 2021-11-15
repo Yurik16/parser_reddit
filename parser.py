@@ -1,10 +1,10 @@
 import json
+from datetime import datetime, timedelta
 import pprint
 import requests
 import time
 import uuid
 
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -45,12 +45,10 @@ def get_content_from_main_page(html):
                 "user_link": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE')['href'],
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
             })
-            parse_user_data(unique_id)
+            get_users_data_from_json(unique_id)
         except AttributeError as e:
+            print(e or "Data error - Post data incorrect")
             del my_lib[unique_id]
-            print(e)
-        except KeyError:
-            print("Key error")
         # pprint.pprint(f'{unique_id}->{my_lib[unique_id]}')
 
     print(len(my_lib))
@@ -76,6 +74,24 @@ def parse_user_data(u_id: str) -> None:
         raise AttributeError("Data error - Users data is restricted")
 
 
+def get_users_data_from_json(u_id: str):
+    """
+    Getting users data from json response by making myself request
+    :param u_id: uuid
+    """
+    name = my_lib[u_id][0]["username"]
+    url = f'https://www.reddit.com/user/{name}/about.json?'
+    r = requests.get(url, params=None, headers=HEADERS)
+    user_json = r.json()
+    try:
+        my_lib[u_id][0]["total_karma"] = user_json["data"]["total_karma"]
+        my_lib[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
+        my_lib[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
+        my_lib[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime('%Y/%m/%d %H:%M')
+    except AttributeError:
+        raise AttributeError("Data error - Users data is restricted")
+
+
 def get_users_links_list(lib: list) -> list:
     """
     Make users links list
@@ -89,11 +105,13 @@ def drv_parse() -> None:
     """Make parsing with Chrome"""
     driver.get(url=URL)
     time.sleep(5)
-    for _ in range(2):
+    elem_counter = 0
+    while elem_counter < 40:
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-        time.sleep(3)
+        time.sleep(2)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
-        print("Results count: %d" % len(elements))
+        elem_counter = len(elements)
+        print("Results count: %d" % elem_counter)
     drv_html = driver.page_source
     get_content_from_main_page(drv_html)
 

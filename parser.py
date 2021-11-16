@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 
 URL = 'https://www.reddit.com/top/?t=month'
 HEADERS = {
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
+    'user-agent': f'Mozilla/5.0 (Windows NT 10.0;' +
+                  f' Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
     'accept': '*/*'
 }
 logging.basicConfig(filename="log.txt", filemode='a',
@@ -76,10 +77,10 @@ def get_users_data_from_json(u_id: str):
         my_lib[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
         my_lib[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
         my_lib[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime('%Y/%m/%d %H:%M')
-    except AttributeError as e:
+    except AttributeError:
         # Catch errors (content 18+) and throw it to next except
         raise AttributeError("Data error - Users data is restricted")
-    except KeyError as e_k:
+    except KeyError:
         # Catch errors (user deleted) and throw it to next except
         raise AttributeError("Data error - Users data is restricted")
 
@@ -138,7 +139,7 @@ def get_txt_file(data: dict) -> None:
 
 
 if __name__ == '__main__':
-    logging.info("Start Program Info")
+    logging.info("Start Program !!!")
     drv_parse()
     get_txt_file(my_lib)
-    logging.info("End program Info")
+    logging.info("End program ---")

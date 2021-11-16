@@ -1,19 +1,22 @@
-import json
-from datetime import datetime, timedelta
 import requests
 import time
 import uuid
+import logging
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 URL = 'https://www.reddit.com/top/?t=month'
 HEADERS = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
     'accept': '*/*'
 }
+logging.basicConfig(filename="log.txt", filemode='a',
+                    format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
+                    level=logging.INFO)
 
 driver = webdriver.Chrome()
 now_day = datetime.today()
@@ -31,6 +34,7 @@ def get_html(url, page=None):
 
 def get_content_from_main_page(html):
     """Make a text data out of main html"""
+    logging.info("Start parsing data")
     soup = BeautifulSoup(html, 'html.parser')
     elem = soup.find_all('div', class_="_1RYN-7H8gYctjOQeL8p2Q7")
     for post in elem:
@@ -49,35 +53,13 @@ def get_content_from_main_page(html):
             get_users_data_from_json(unique_id)
         except AttributeError as e:
             # Catch errors (if Live Stream or 18+) and exclude that unit from result data
-            print(e or "Data error - Post data incorrect")
+            logging.warning(e or "Data error - Post data incorrect")
             del my_lib[unique_id]
-        except KeyError:
-            print(e or "Key Error - Post data incorrect")
+        except KeyError as k_e:
+            logging.warning(k_e)
             del my_lib[unique_id]
-        print(round(float(len(my_lib)/(num_of_parsing_posts + 20) * 100), 2), "%")
-
-    print(len(my_lib))
-
-
-def parse_user_data(u_id: str) -> None:
-    """
-    Make a data dict out of users page
-    :param u_id: Unique id made by uuid
-    :return: None
-    """
-    link = my_lib[u_id][0]["user_link"]
-    el = f'https://www.reddit.com{link}'
-    print(el)
-    response = requests.get(el, params=None, headers=HEADERS)
-    html = response.content
-    soup = BeautifulSoup(html, 'html.parser')
-    user_div = soup.find('div', class_='_3Im6OD67aKo33nql4FpSp_')
-    try:
-        my_lib[u_id][0]["karma"] = user_div.find_next('span', id='profile--id-card--highlight-tooltip--karma').text
-        my_lib[u_id][0]["cake_day"] = user_div.find_next('span', id='profile--id-card--highlight-tooltip--cakeday').text
-    except AttributeError:
-        # Catch errors (content 18+) and throw it to next exception
-        raise AttributeError("Data error - Users data is restricted")
+        # print(round(float(len(my_lib) / (num_of_parsing_posts + 20) * 100), 2), "%")
+    logging.info("Parsing data Done")
 
 
 def get_users_data_from_json(u_id: str):
@@ -94,9 +76,11 @@ def get_users_data_from_json(u_id: str):
         my_lib[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
         my_lib[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
         my_lib[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime('%Y/%m/%d %H:%M')
-    except AttributeError:
+    except AttributeError as e:
+        # Catch errors (content 18+) and throw it to next except
         raise AttributeError("Data error - Users data is restricted")
-    except KeyError:
+    except KeyError as e_k:
+        # Catch errors (user deleted) and throw it to next except
         raise AttributeError("Data error - Users data is restricted")
 
 
@@ -111,6 +95,7 @@ def get_users_links_list(lib: list) -> list:
 
 def drv_parse() -> None:
     """Make parsing with Chrome"""
+    logging.info("Start scrolling page")
     driver.get(url=URL)
     time.sleep(5)
     elem_counter = 0
@@ -119,9 +104,10 @@ def drv_parse() -> None:
         time.sleep(2)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
         elem_counter = len(elements)
-        print("Results count: %d" % elem_counter)
+        # print("Results count: %d" % elem_counter)
     drv_html = driver.page_source
     get_content_from_main_page(drv_html)
+    logging.info("Scrolling page Done")
 
 
 def get_txt_file(data: dict) -> None:
@@ -130,9 +116,9 @@ def get_txt_file(data: dict) -> None:
     :param data: result dict with parsing data
     :return: None
     """
+    logging.info("Convert data to txt")
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
     result_list = []
-    # result_dict = json.dumps(data)
     for key, val in data.items():
         if len(result_list) < num_of_parsing_posts:
             result_list.append(f'{key};' +
@@ -151,5 +137,8 @@ def get_txt_file(data: dict) -> None:
         file.write("\n".join(result_list))
 
 
-drv_parse()
-get_txt_file(my_lib)
+if __name__ == '__main__':
+    logging.info("Start Program Info")
+    drv_parse()
+    get_txt_file(my_lib)
+    logging.info("End program Info")

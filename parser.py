@@ -1,16 +1,15 @@
-import requests
+import argparse
+import logging
 import time
 import uuid
-import logging
-import argparse
+from datetime import datetime, timedelta
 
+import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from collections import defaultdict
-from datetime import datetime, timedelta
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 URL = 'https://www.reddit.com/top/?t=month'
 HEADERS = {
@@ -22,20 +21,28 @@ logging.basicConfig(filename="log.txt", filemode='a',
                     format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
                     level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
-options = webdriver.ChromeOptions()
-options.add_experimental_option('excludeSwitches', ['enable-logging'])
-driver = webdriver.Chrome(options=options)
-
 now_day = datetime.today()
 parser = argparse.ArgumentParser()
-parser.add_argument("--count", metavar="count", type=int, default=100, help="num_of_parsing_posts")
+parser.add_argument("--count", metavar="count", type=int, default=100, help="NUM_OF_PARSING_POSTS")
 parser.add_argument("--filepath", metavar="filepath", type=str, default="", help="filepath to result txt")
 args = parser.parse_args()
 
 # dict with result data from web
-my_lib = defaultdict(list)
+my_lib = {}
 # number of parsing posts
-num_of_parsing_posts = args.count
+NUM_OF_PARSING_POSTS = args.count
+
+
+def driver_init() -> object:
+    """
+    Init WebDriver
+    :return: browser driver
+    """
+    options = webdriver.ChromeOptions()
+    options.headless = True
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    driver = webdriver.Chrome(options=options)
+    return driver
 
 
 def get_html(url, page=None):
@@ -51,6 +58,7 @@ def get_content_from_main_page(html):
     for post in elem:
         try:
             unique_id = str(uuid.uuid1())
+            my_lib[unique_id] = []  # can use defaultDict(list)
             my_lib[unique_id].append({
                 "username": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
                 "post_category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
@@ -69,7 +77,6 @@ def get_content_from_main_page(html):
         except KeyError as k_e:
             logging.warning(k_e)
             del my_lib[unique_id]
-        # print(round(float(len(my_lib) / (num_of_parsing_posts + 20) * 100), 2), "%")
     logging.info("Parsing data Done")
 
 
@@ -105,6 +112,12 @@ def get_users_links_list(lib: list) -> list:
 
 
 def pause_till_browser_load(browser, timeout: int) -> None:
+    """
+    Waiting while browser loads the elements
+    :param browser: browser driver
+    :param timeout: time in sec
+    :return: None
+    """
     try:
         myElem = WebDriverWait(browser, timeout).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')))
@@ -115,16 +128,16 @@ def pause_till_browser_load(browser, timeout: int) -> None:
 def drv_parse() -> None:
     """Make parsing with Chrome"""
     logging.info("Start scrolling page")
+    driver = driver_init()
     driver.get(url=URL)
     time.sleep(3)
     elem_counter = 0
-    while elem_counter < num_of_parsing_posts + 20:
+    while elem_counter < NUM_OF_PARSING_POSTS + 20:
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
         pause_till_browser_load(driver, 5)
         # time.sleep(2)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
         elem_counter = len(elements)
-        # print("Results count: %d" % elem_counter)
     logging.info("Scrolling page Done")
     drv_html = driver.page_source
     get_content_from_main_page(drv_html)
@@ -140,7 +153,7 @@ def get_txt_file(data: dict) -> None:
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
     result_list = []
     for key, val in data.items():
-        if len(result_list) < num_of_parsing_posts:
+        if len(result_list) < NUM_OF_PARSING_POSTS:
             result_list.append(f'{key};' +
                                f' https://www.reddit.com/{val[0]["post_link"]};' +
                                f' {val[0]["username"]};' +

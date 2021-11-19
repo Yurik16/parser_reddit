@@ -21,21 +21,29 @@ logging.basicConfig(filename="log.txt", filemode='a',
                     format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
                     level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
-now_day = datetime.today()
-parser = argparse.ArgumentParser()
-parser.add_argument("--count", metavar="count", type=int, default=100, help="NUM_OF_PARSING_POSTS")
-parser.add_argument("--filepath", metavar="filepath", type=str, default="", help="filepath to result txt")
-args = parser.parse_args()
+
+def argparse_init(num_of_posts=100, filepath="") -> "args":
+    """Init argparse module
+
+    :param num_of_posts:
+    :param filepath:
+    :return:
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--count", metavar="count", type=int, default=num_of_posts, help="NUM_OF_PARSING_POSTS")
+    parser.add_argument("--filepath", metavar="filepath", type=str, default=filepath, help="filepath to result txt")
+    args = parser.parse_args()
+    return args
+
 
 # dict with result data from web
-my_lib = {}
+STORE_DATA_AS_DICT = {}
 # number of parsing posts
-NUM_OF_PARSING_POSTS = args.count
+NUM_OF_PARSING_POSTS = argparse_init.count
 
 
-def driver_init() -> object:
-    """
-    Init WebDriver
+def driver_init() -> "driver":
+    """Init WebDriver
     :return: browser driver
     """
     options = webdriver.ChromeOptions()
@@ -58,11 +66,11 @@ def get_content_from_main_page(html):
     for post in elem:
         try:
             unique_id = str(uuid.uuid1())
-            my_lib[unique_id] = []  # can use defaultDict(list)
-            my_lib[unique_id].append({
+            STORE_DATA_AS_DICT[unique_id] = []  # can use defaultDict(list)
+            STORE_DATA_AS_DICT[unique_id].append({
                 "username": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
                 "post_category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
-                "post_date": (now_day - timedelta(
+                "post_date": (datetime.today() - timedelta(
                     int(post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text.split(' ')[0]))).strftime('%Y/%m/%d'),
                 "Number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
                 "post_votes": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
@@ -73,27 +81,27 @@ def get_content_from_main_page(html):
         except AttributeError as e:
             # Catch errors (if Live Stream or 18+) and exclude that unit from result data
             logging.warning(e or "Data error - Post data incorrect")
-            del my_lib[unique_id]
+            del STORE_DATA_AS_DICT[unique_id]
         except KeyError as k_e:
             logging.warning(k_e)
-            del my_lib[unique_id]
+            del STORE_DATA_AS_DICT[unique_id]
     logging.info("Parsing data Done")
 
 
 def get_users_data_from_json(u_id: str):
-    """
-    Getting users data from json response by making myself request
+    """Getting users data from json response by making myself request
     :param u_id: uuid
     """
-    name = my_lib[u_id][0]["username"]
+    name = STORE_DATA_AS_DICT[u_id][0]["username"]
     url = f'https://www.reddit.com/user/{name}/about.json?'
     r = requests.get(url, params=None, headers=HEADERS)
     user_json = r.json()
     try:
-        my_lib[u_id][0]["total_karma"] = user_json["data"]["total_karma"]
-        my_lib[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
-        my_lib[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
-        my_lib[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime('%Y/%m/%d %H:%M')
+        STORE_DATA_AS_DICT[u_id][0]["total_karma"] = user_json["data"]["total_karma"]
+        STORE_DATA_AS_DICT[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
+        STORE_DATA_AS_DICT[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
+        STORE_DATA_AS_DICT[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime(
+            '%Y/%m/%d %H:%M')
     except AttributeError:
         # Catch errors (content 18+) and throw it to next except
         raise AttributeError("Data error - Users data is restricted")
@@ -103,8 +111,7 @@ def get_users_data_from_json(u_id: str):
 
 
 def get_users_links_list(lib: list) -> list:
-    """
-    Make users links list
+    """Make users links list
     :param lib: list of dicts with post data
     :return: list of links on users page
     """
@@ -112,8 +119,7 @@ def get_users_links_list(lib: list) -> list:
 
 
 def pause_till_browser_load(browser, timeout: int) -> None:
-    """
-    Waiting while browser loads the elements
+    """Waiting while browser loads the elements
     :param browser: browser driver
     :param timeout: time in sec
     :return: None
@@ -144,8 +150,7 @@ def drv_parse() -> None:
 
 
 def get_txt_file(data: dict) -> None:
-    """
-    Convert result dict to txt
+    """Convert result dict to txt
     :param data: result dict with parsing data
     :return: None
     """
@@ -166,12 +171,12 @@ def get_txt_file(data: dict) -> None:
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )
-    with open(f'{args.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
+    with open(f'{argparse_init.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(result_list))
 
 
 if __name__ == '__main__':
     logging.info("Start Program !!!")
     drv_parse()
-    get_txt_file(my_lib)
+    get_txt_file(STORE_DATA_AS_DICT)
     logging.info("End program \n")

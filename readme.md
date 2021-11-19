@@ -10,13 +10,14 @@ git clone https://github.com/Yurik16/parser_reddit.git
 
 ## Usage
 
-At the parser.py you can change some constants like num_of_parsing_posts
+Using the terminal you can add arguments and change number of parsing posts (--count), file path for saving result *.txt
+file (--filepath)
 
 ## returns
 
 Returns reddit-*.txt file with top 100 posts. Each line in that file contains:
-UNIQUE_ID; post URL; username; user karma; user cake day; post karma; comment karma; post date; number of comments; number of
-votes; post category
+UNIQUE_ID; post URL; username; user karma; user cake day; post karma; comment karma; post date; number of comments;
+number of votes; post category
 
 ## Contributing
 

@@ -2,6 +2,7 @@ import requests
 import time
 import uuid
 import logging
+import argparse
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -11,10 +12,6 @@ from selenium.webdriver.common.by import By
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-# dict with result data from web
-my_lib = defaultdict(list)
-# number of parsing posts
-num_of_parsing_posts = 100
 URL = 'https://www.reddit.com/top/?t=month'
 HEADERS = {
     'user-agent': f'Mozilla/5.0 (Windows NT 10.0;' +
@@ -25,8 +22,20 @@ logging.basicConfig(filename="log.txt", filemode='a',
                     format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
                     level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
-driver = webdriver.Chrome()
+options = webdriver.ChromeOptions()
+options.add_experimental_option('excludeSwitches', ['enable-logging'])
+driver = webdriver.Chrome(options=options)
+
 now_day = datetime.today()
+parser = argparse.ArgumentParser()
+parser.add_argument("--count", metavar="count", type=int, default=30, help="num_of_parsing_posts")
+parser.add_argument("--filepath", metavar="filepath", type=str, default="", help="filepath to result txt")
+args = parser.parse_args()
+
+# dict with result data from web
+my_lib = defaultdict(list)
+# number of parsing posts
+num_of_parsing_posts = args.count
 
 
 def get_html(url, page=None):
@@ -144,7 +153,7 @@ def get_txt_file(data: dict) -> None:
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )
-    with open(f'reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
+    with open(f'{args.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(result_list))
 
 

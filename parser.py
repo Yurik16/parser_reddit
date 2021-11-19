@@ -2,9 +2,12 @@ import requests
 import time
 import uuid
 import logging
+import argparse
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -17,15 +20,22 @@ HEADERS = {
 }
 logging.basicConfig(filename="log.txt", filemode='a',
                     format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
-                    level=logging.INFO)
+                    level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
-driver = webdriver.Chrome()
+options = webdriver.ChromeOptions()
+options.add_experimental_option('excludeSwitches', ['enable-logging'])
+driver = webdriver.Chrome(options=options)
+
 now_day = datetime.today()
+parser = argparse.ArgumentParser()
+parser.add_argument("--count", metavar="count", type=int, default=100, help="num_of_parsing_posts")
+parser.add_argument("--filepath", metavar="filepath", type=str, default="", help="filepath to result txt")
+args = parser.parse_args()
 
 # dict with result data from web
 my_lib = defaultdict(list)
 # number of parsing posts
-num_of_parsing_posts = 100
+num_of_parsing_posts = args.count
 
 
 def get_html(url, page=None):
@@ -94,21 +104,30 @@ def get_users_links_list(lib: list) -> list:
     return [f'https://www.reddit.com{elem["user_link"]}' for elem in lib]
 
 
+def pause_till_browser_load(browser, timeout: int) -> None:
+    try:
+        myElem = WebDriverWait(browser, timeout).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')))
+    except TimeoutError:
+        logging.warning("Timed out waiting for page to load")
+
+
 def drv_parse() -> None:
     """Make parsing with Chrome"""
     logging.info("Start scrolling page")
     driver.get(url=URL)
-    time.sleep(5)
+    time.sleep(3)
     elem_counter = 0
     while elem_counter < num_of_parsing_posts + 20:
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-        time.sleep(2)
+        pause_till_browser_load(driver, 5)
+        # time.sleep(2)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
         elem_counter = len(elements)
         # print("Results count: %d" % elem_counter)
+    logging.info("Scrolling page Done")
     drv_html = driver.page_source
     get_content_from_main_page(drv_html)
-    logging.info("Scrolling page Done")
 
 
 def get_txt_file(data: dict) -> None:
@@ -134,7 +153,7 @@ def get_txt_file(data: dict) -> None:
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )
-    with open(f'reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
+    with open(f'{args.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(result_list))
 
 
@@ -142,4 +161,4 @@ if __name__ == '__main__':
     logging.info("Start Program !!!")
     drv_parse()
     get_txt_file(my_lib)
-    logging.info("End program ---")
+    logging.info("End program \n")

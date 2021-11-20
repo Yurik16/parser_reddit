@@ -17,40 +17,39 @@ HEADERS = {
                   f' Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
     'accept': '*/*'
 }
-logging.basicConfig(filename="log.txt", filemode='a',
-                    format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
-                    level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
+STORE_DATA_AS_DICT = {}  # dict with result data from web
+ARGS = object  # argparse obj, gets attributes: count (numbers of parsing posts) and filepath (result_txt file path)
 
 
-def argparse_init(num_of_posts=100, filepath="") -> "args":
-    """Init argparse module
-
-    :param num_of_posts:
-    :param filepath:
-    :return:
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--count", metavar="count", type=int, default=num_of_posts, help="NUM_OF_PARSING_POSTS")
-    parser.add_argument("--filepath", metavar="filepath", type=str, default=filepath, help="filepath to result txt")
-    args = parser.parse_args()
-    return args
-
-
-# dict with result data from web
-STORE_DATA_AS_DICT = {}
-# number of parsing posts
-NUM_OF_PARSING_POSTS = argparse_init.count
+def logging_init() -> None:
+    """Init logging"""
+    logging.basicConfig(filename="log.txt", filemode='a',
+                        format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
+                        level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
 
 def driver_init() -> "driver":
     """Init WebDriver
-    :return: browser driver
+    :return: web browser driver
     """
     options = webdriver.ChromeOptions()
     options.headless = True
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
     driver = webdriver.Chrome(options=options)
     return driver
+
+
+def argparse_init(num_of_posts=100, filepath="") -> "args":
+    """Init argparse module
+    :param num_of_posts:
+    :param filepath:
+    :return: argparse module object
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--count", metavar="count", type=int, default=num_of_posts, help="number of parsing posts")
+    parser.add_argument("--filepath", metavar="filepath", type=str, default=filepath, help="filepath to result txt")
+    args = parser.parse_args()
+    return args
 
 
 def get_html(url, page=None):
@@ -110,14 +109,6 @@ def get_users_data_from_json(u_id: str):
         raise AttributeError("Data error - Users data is restricted")
 
 
-def get_users_links_list(lib: list) -> list:
-    """Make users links list
-    :param lib: list of dicts with post data
-    :return: list of links on users page
-    """
-    return [f'https://www.reddit.com{elem["user_link"]}' for elem in lib]
-
-
 def pause_till_browser_load(browser, timeout: int) -> None:
     """Waiting while browser loads the elements
     :param browser: browser driver
@@ -138,7 +129,7 @@ def drv_parse() -> None:
     driver.get(url=URL)
     time.sleep(3)
     elem_counter = 0
-    while elem_counter < NUM_OF_PARSING_POSTS + 20:
+    while elem_counter < ARGS.count + 20:
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
         pause_till_browser_load(driver, 5)
         # time.sleep(2)
@@ -158,7 +149,7 @@ def get_txt_file(data: dict) -> None:
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
     result_list = []
     for key, val in data.items():
-        if len(result_list) < NUM_OF_PARSING_POSTS:
+        if len(result_list) < ARGS.count:
             result_list.append(f'{key};' +
                                f' https://www.reddit.com/{val[0]["post_link"]};' +
                                f' {val[0]["username"]};' +
@@ -171,11 +162,13 @@ def get_txt_file(data: dict) -> None:
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )
-    with open(f'{argparse_init.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
+    with open(f'{ARGS.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(result_list))
 
 
 if __name__ == '__main__':
+    logging_init()
+    ARGS = argparse_init()
     logging.info("Start Program !!!")
     drv_parse()
     get_txt_file(STORE_DATA_AS_DICT)

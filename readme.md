@@ -1,12 +1,21 @@
 # parser_reddit
 
-"parser_reddit" is a Python script program that collects data from https://www.reddit.com \
+"parser_reddit" is a Python script program that collects data from https://www.reddit.com <br />
 Top 100 posts of the month.
 
 ## Installation
-
-Just сlone repository - git clone https://github.com/Yurik16/parser_reddit.git \
-Before run parser.py install all packages from requirements.txt -> pip install -r /path/to/requirements.txt
+Before install you must have:
+<ul>
+    <li> Python 3.7+
+    <li> Git bash
+    <li> Selenium
+    <li> last update for <a url="https://chromedriver.chromium.org/home">Chromedriver</a> 
+</ul>
+Clone repository - git clone https://github.com/Yurik16/parser_reddit.git <br />
+Before run parser.py move to working folder and install all packages from requirements.txt. Execute: <br />
+<li> virtualenv venv
+<li> source venv/bin/activate
+<li> pip install -r /path/to/requirements.txt
 
 ## Usage
 

@@ -13,7 +13,6 @@ pycparser==2.20
 pyOpenSSL==21.0.0
 requests==2.26.0
 selenium==4.0.0
-six==1.16.0
 sniffio==1.2.0
 sortedcontainers==2.4.0
 soupsieve==2.3

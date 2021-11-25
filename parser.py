@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import time
 import uuid
@@ -163,6 +164,8 @@ def get_txt_file(data: dict) -> None:
                                )
     with open(f'{ARGS.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(result_list))
+    with open("result.json", 'w', encoding="utf-8") as jf:
+        jf.write(json.dumps(STORE_DATA_AS_DICT))
 
 
 if __name__ == '__main__':

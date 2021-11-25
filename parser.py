@@ -40,7 +40,7 @@ def driver_init() -> "driver":
     return driver
 
 
-def argparse_init(num_of_posts=100, filepath="") -> "args":
+def argparse_init(num_of_posts=20, filepath="") -> "args":
     """Init argparse module
     :param num_of_posts:
     :param filepath:
@@ -85,6 +85,8 @@ def get_content_from_main_page(html):
         except KeyError as k_e:
             logging.warning(k_e)
             del STORE_DATA_AS_DICT[unique_id]
+        requests.post('http://localhost:8000', json=json.dumps(STORE_DATA_AS_DICT[unique_id]),
+                      headers={"Content-Type": "application/json"}, )
     logging.info("Parsing data Done")
 
 

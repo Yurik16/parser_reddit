@@ -85,8 +85,11 @@ def get_content_from_main_page(html):
         except KeyError as k_e:
             logging.warning(k_e)
             del STORE_DATA_AS_DICT[unique_id]
-        requests.post('http://localhost:8000', json=json.dumps(STORE_DATA_AS_DICT[unique_id]),
-                      headers={"Content-Type": "application/json"}, )
+        try:
+            requests.post('http://localhost:8000', body=json.dumps(STORE_DATA_AS_DICT[unique_id]),
+                          headers={"Content-Type": "application/json"}, )
+        except ConnectionError as ce:
+            logging.warning(ce)
     logging.info("Parsing data Done")
 
 
@@ -142,13 +145,12 @@ def drv_parse() -> None:
     get_content_from_main_page(drv_html)
 
 
-def get_txt_file(data: dict) -> None:
+def get_list_from_dict(data: dict) -> list:
     """Convert result dict to txt
     :param data: result dict with parsing data
     :return: None
     """
-    logging.info("Convert data to txt")
-    time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
+    logging.info("Convert data to list")
     result_list = []
     for key, val in data.items():
         if len(result_list) < ARGS.count:
@@ -164,8 +166,14 @@ def get_txt_file(data: dict) -> None:
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )
+    return result_list
+
+
+def file_create():
+    logging.info("Convert list to txt")
+    time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
     with open(f'{ARGS.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
-        file.write("\n".join(result_list))
+        file.write("\n".join(get_list_from_dict(STORE_DATA_AS_DICT)))
     with open("result.json", 'w', encoding="utf-8") as jf:
         jf.write(json.dumps(STORE_DATA_AS_DICT))
 
@@ -175,5 +183,5 @@ if __name__ == '__main__':
     ARGS = argparse_init()
     logging.info("Start Program !!!")
     drv_parse()
-    get_txt_file(STORE_DATA_AS_DICT)
+    get_list_from_dict(STORE_DATA_AS_DICT)
     logging.info("End program \n")

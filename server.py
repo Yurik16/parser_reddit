@@ -1,4 +1,6 @@
+import json
 import os
+from io import BytesIO
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 base_path = os.path.dirname(__file__)
@@ -7,27 +9,26 @@ base_path = os.path.dirname(__file__)
 class StaticServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        filename = 'result.json'
+        if self.path == '/json':
+            filename = 'result.json'
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json', )
+            self.end_headers()
+            with open(os.path.join(base_path, filename), 'rb') as fh:
+                self.wfile.write(fh.read())
 
-        self.send_response(200)
-        self.send_header('Content-type', 'text/json')
-        self.end_headers()
-        with open(os.path.join(base_path, filename), 'rb') as fh:
-            self.wfile.write(fh.read())
+        if self.path == '/wait':
+            pass
 
     def do_POST(self):
-        rr = self.
+        content_length = int(self.headers['Content-length'])
+        body = self.rfile.read(content_length)
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        # content_length = ??
-        # wfile -
-
         self.end_headers()
-        self.data_string = self.rfile.read(int(self.headers['Content-Length']))
-
-        data = b'<html><body><h1>POST!</h1></body></html>'
-        self.wfile.write(bytes(data))
-        return
+        response = BytesIO()
+        response.write(b'new POST request')
+        response.write(body)
+        self.wfile.write(response.getvalue())
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

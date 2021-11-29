@@ -40,7 +40,7 @@ def driver_init() -> "driver":
     return driver
 
 
-def argparse_init(num_of_posts=30, filepath="") -> "args":
+def argparse_init(num_of_posts=20, filepath="") -> "args":
     """Init argparse module
     :param num_of_posts:
     :param filepath:
@@ -85,8 +85,10 @@ def get_content_from_main_page(html):
         except KeyError as k_e:
             logging.warning(k_e)
             del STORE_DATA_AS_DICT[unique_id]
+        payload = {"username": STORE_DATA_AS_DICT[unique_id][0]["username"],
+                                                         "post_date": STORE_DATA_AS_DICT[unique_id][0]["post_date"], }
         try:
-            requests.post('http://localhost:8000', data={'unique_id': unique_id, },
+            requests.post('http://localhost:8000', json=json.dumps(payload),
                           headers={"Content-Type": "application/json"}, )
         except ConnectionError as ce:
             logging.warning(ce)

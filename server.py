@@ -1,7 +1,6 @@
-import json
 import os
-from io import BytesIO
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from io import BytesIO
 
 base_path = os.path.dirname(__file__)
 RESULT = [
@@ -10,6 +9,10 @@ RESULT = [
 
 
 class StaticServer(BaseHTTPRequestHandler):
+    RESULT_FILENAME = '?'
+    RESULT = [
+        "key", "value",
+    ]
 
     def _html(self, message):
         """Generates an HTML document that includes `message`
@@ -40,30 +43,40 @@ class StaticServer(BaseHTTPRequestHandler):
             lol = self.row_major(alist, sublength)
         return ''.join(self.html_table(lol))
 
+    def _set_headers(self, content='text/html'):
+        self.send_response(200)
+        self.send_header('Content-type', content, )
+        self.end_headers()
+
     def do_GET(self):
+        # Getting str after last '/' in curl
+        uid = self.requestline.split(' ')[1].split('/')[-1]
         if self.path == '/json/':
             filename = 'result.json'
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json', )
-            self.end_headers()
+            self._set_headers('application/json')
             with open(os.path.join(base_path, filename), 'rb') as fh:
                 self.wfile.write(fh.read())
         elif self.path == '/wait':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html', )
-            self.end_headers()
+            self._set_headers()
             self.wfile.write(self._html("Waiting ..."))
         elif self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html', )
-            self.end_headers()
+            self._set_headers()
             self.wfile.write(self.list_to_html_table(RESULT, 2).encode("utf8"))
+        elif self.path == f'/post/{uid}':
+            filename = 'reddit-2021111128211534.txt'
+            self._set_headers('application/json')
+            with open(os.path.join(base_path, filename), 'rb') as fh:
+                self.wfile.write(fh.readlines()[int(uid.encode("utf8"))])
+        elif self.path == f'/get_url/{uid}':
+            self._set_headers('application/json')
+            self.wfile.write(self._html(self.requestline))
 
     def do_POST(self):
         content_length = int(self.headers['Content-length'])
         body = self.rfile.read(content_length)
         self.send_response(200)
         RESULT.append(body.decode("utf8"))
+
         self.send_header('Content-type', 'text/html', )
         self.send_header('Content-type', 'application/json', )
         self.end_headers()

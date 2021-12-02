@@ -1,4 +1,6 @@
+import json
 import os
+from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import BytesIO
 
@@ -9,7 +11,7 @@ RESULT = [
 
 
 class StaticServer(BaseHTTPRequestHandler):
-    RESULT_FILENAME = '?'
+    RESULT_FILENAME = ''
     RESULT = [
         "key", "value",
     ]
@@ -62,8 +64,8 @@ class StaticServer(BaseHTTPRequestHandler):
         elif self.path == '/':
             self._set_headers()
             self.wfile.write(self.list_to_html_table(RESULT, 2).encode("utf8"))
-        elif self.path == f'/post/{uid}':
-            filename = 'reddit-2021111128211534.txt'
+        elif self.path == f'/posts/{uid}':
+            filename = f'reddit-{self.RESULT_FILENAME}.json'
             self._set_headers('application/json')
             with open(os.path.join(base_path, filename), 'rb') as fh:
                 self.wfile.write(fh.readlines()[int(uid.encode("utf8"))])
@@ -72,18 +74,15 @@ class StaticServer(BaseHTTPRequestHandler):
             self.wfile.write(self._html(self.requestline))
 
     def do_POST(self):
-        content_length = int(self.headers['Content-length'])
-        body = self.rfile.read(content_length)
-        self.send_response(200)
-        RESULT.append(body.decode("utf8"))
-
-        self.send_header('Content-type', 'text/html', )
-        self.send_header('Content-type', 'application/json', )
-        self.end_headers()
-        response = BytesIO()
-        response.write(b'new data gets to list:\n')
-        response.write(body)
-        self.wfile.write(response.getvalue())
+        if self.path == '/posts/':
+            if self.RESULT_FILENAME == '':
+                time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
+                self.RESULT_FILENAME = f'reddit-{time_str}.json'
+            self._set_headers('application/json')
+            content_length = int(self.headers['Content-length'])
+            body = self.rfile.read(content_length)
+            with open(f'{self.RESULT_FILENAME}', 'a') as file:
+                file.write(body.decode("utf-8") + "\n")
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

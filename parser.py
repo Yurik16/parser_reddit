@@ -40,7 +40,7 @@ def driver_init() -> "driver":
     return driver
 
 
-def argparse_init(num_of_posts=20, filepath="") -> "args":
+def argparse_init(num_of_posts=10, filepath="") -> "args":
     """Init argparse module
     :param num_of_posts:
     :param filepath:
@@ -85,11 +85,11 @@ def get_content_from_main_page(html):
         except KeyError as k_e:
             logging.warning(k_e)
             del STORE_DATA_AS_DICT[unique_id]
-        payload = {"username": STORE_DATA_AS_DICT[unique_id][0]["username"],
-                                                         "post_date": STORE_DATA_AS_DICT[unique_id][0]["post_date"], }
         try:
-            requests.post('http://localhost:8000', json=json.dumps(payload),
-                          headers={"Content-Type": "application/json"}, )
+            payload = {unique_id: STORE_DATA_AS_DICT[unique_id][0]}
+            requests.post('http://localhost:8000/posts/', data=json.dumps(payload),
+                          headers={"Content-Type": "application/json"})
+
         except ConnectionError as ce:
             logging.warning(ce)
     logging.info("Parsing data Done")
@@ -137,7 +137,7 @@ def drv_parse() -> None:
     driver.get(url=URL)
     time.sleep(3)
     elem_counter = 0
-    while elem_counter < ARGS.count + 20:
+    while elem_counter < ARGS.count + 10:
         driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
         pause_till_browser_load(driver)
         elements = driver.find_elements(By.CLASS_NAME, '_1oQyIsiPHYt6nx7VOmd1sz')
@@ -185,5 +185,5 @@ if __name__ == '__main__':
     ARGS = argparse_init()
     logging.info("Start Program !!!")
     drv_parse()
-    get_list_from_dict(STORE_DATA_AS_DICT)
+    # get_list_from_dict(STORE_DATA_AS_DICT)
     logging.info("End program \n")

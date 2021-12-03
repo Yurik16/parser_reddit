@@ -61,7 +61,7 @@ class StaticServer(BaseHTTPRequestHandler):
         elif self.path == '/wait':
             self._set_headers()
             self.wfile.write(self._html("Waiting ..."))
-        elif self.path =='/posts/':
+        elif self.path == '/posts/':
             self._set_headers('application/json')
             filename = f'reddit-{self.time_str}.json'
             with open(os.path.join(base_path, filename), 'rb') as fh:
@@ -85,8 +85,23 @@ class StaticServer(BaseHTTPRequestHandler):
             with open(f'reddit-{self.time_str}.json', 'a') as file:
                 file.write(body.decode("utf-8") + "\n")
             uid = body.decode("utf-8").split('": {')[0][2::]
-            self.wfile.write(self._html(uid))
+            numb_of_line = sum(1 for line in open(f'reddit-{self.time_str}.json'))
+            self.wfile.write((f'{uid}: {numb_of_line}').encode("utf8"))
 
+    def do_DELETE(self):
+        line_num = self.requestline.split(' ')[1].split('/')[-1]
+        if self.path == f'/posts/{line_num}':
+            self._set_headers('application/json')
+            with open(f'reddit-{self.time_str}.json', 'r+') as fh:
+                lines = fh.readlines()
+                fh.seek(0)
+                fh.truncate()
+                for enum, line in enumerate(lines):
+                    if enum != int(line_num):
+                        fh.write(line)
+
+    def do_PUT(self):
+        pass
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

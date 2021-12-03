@@ -92,6 +92,9 @@ def get_content_from_main_page(html):
 
         except ConnectionError as ce:
             logging.warning(ce)
+        if len(STORE_DATA_AS_DICT.keys()) >= ARGS.count:
+            logging.info("Parsing data Done")
+            break
     logging.info("Parsing data Done")
 
 
@@ -176,8 +179,17 @@ def file_create():
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
     with open(f'{ARGS.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(get_list_from_dict(STORE_DATA_AS_DICT)))
-    with open("result.json", 'w', encoding="utf-8") as jf:
-        jf.write(json.dumps(STORE_DATA_AS_DICT))
+
+
+def file_create_by_server(uid: str):
+    logging.info("Save data to json by server")
+    try:
+        payload = {uid: STORE_DATA_AS_DICT[uid][0]}
+        requests.post('http://localhost:8000/posts/', data=json.dumps(payload),
+                      headers={"Content-Type": "application/json"})
+
+    except ConnectionError as ce:
+        logging.warning(ce)
 
 
 if __name__ == '__main__':

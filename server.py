@@ -52,7 +52,7 @@ class StaticServer(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        uid = self.requestline.split(' ')[1].split('/')[-1]
+        uid = self.path.split('/')[-1]
         if self.path == '/json/':
             filename = 'result.json'
             self._set_headers('application/json')
@@ -82,11 +82,18 @@ class StaticServer(BaseHTTPRequestHandler):
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
-            with open(f'reddit-{self.time_str}.json', 'a') as file:
-                file.write(body.decode("utf-8") + "\n")
-            uid = body.decode("utf-8").split('": {')[0][2::]
+            uid = body.decode("utf-8").split('": {')[0].strip()
             numb_of_line = sum(1 for line in open(f'reddit-{self.time_str}.json'))
-            self.wfile.write((f'{uid}: {numb_of_line}').encode("utf8"))
+            with open(f'reddit-{self.time_str}.json', 'a+') as file:
+                data = file.readlines()
+                for line in data:
+                    line_dict = json.loads(line)
+                    if uid in line_dict.keys():
+                        self.wfile.write((f'{uid} - duplicates are restricted').encode("utf8"))
+                        self.send_response(301)
+                        file.close()
+                file.write(body.decode("utf-8") + "\n")
+                self.wfile.write((f'{uid}: {numb_of_line}').encode("utf8"))
 
     def do_DELETE(self):
         line_num = self.requestline.split(' ')[1].split('/')[-1]
@@ -101,7 +108,20 @@ class StaticServer(BaseHTTPRequestHandler):
                         fh.write(line)
 
     def do_PUT(self):
-        pass
+        line_num = self.requestline.split(' ')[1].split('/')[-1]
+        if self.path == f'/posts/{line_num}':
+            self._set_headers('application/json')
+            content_length = int(self.headers['Content-length'])
+            body = self.rfile.read(content_length)
+            with open(f'reddit-{self.time_str}.json', 'r+') as fh:
+                lines = fh.readlines()
+                fh.seek(0)
+                fh.truncate()
+                for enum, line in enumerate(lines):
+                    if enum != int(line_num):
+                        fh.write(line)
+                    else:
+                        fh.write(body.decode("utf-8") + "\n")
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

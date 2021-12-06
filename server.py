@@ -8,8 +8,8 @@ base_path = os.path.dirname(__file__)
 
 
 class StaticServer(BaseHTTPRequestHandler):
-    RESULT_FILENAME = ''
-    time_str = str(datetime.now().strftime("%Y%m%D").replace("/", ""))
+    time_str = str(datetime.now().strftime('%Y_%m_%d'))
+    RESULT_FILENAME = f'reddit_{time_str}.txt'
 
     def _html(self, message: str):
         """Generates an HTML document that includes `message`
@@ -54,24 +54,21 @@ class StaticServer(BaseHTTPRequestHandler):
     def do_GET(self):
         uid = self.path.split('/')[-1]
         if self.path == '/json/':
-            filename = 'result.json'
             self._set_headers('application/json')
-            with open(os.path.join(base_path, filename), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
                 self.wfile.write(fh.read())
         elif self.path == '/wait':
             self._set_headers()
             self.wfile.write(self._html("Waiting ..."))
         elif self.path == '/posts/':
             self._set_headers('application/json')
-            filename = f'reddit-{self.time_str}.json'
-            with open(os.path.join(base_path, filename), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
                 for each in fh:
                     self.wfile.write(each)
                     self.wfile.write(f'\n'.encode("utf-8"))
         elif self.path == f'/posts/{uid}':
-            filename = f'reddit-{self.time_str}.json'
             self._set_headers('application/json')
-            with open(os.path.join(base_path, filename), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
                 self.wfile.write(fh.readlines()[int(uid.encode("utf8"))])
         elif self.path == f'/get_url/{uid}':
             self._set_headers('application/json')
@@ -83,23 +80,21 @@ class StaticServer(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
             uid = body.decode("utf-8").split('": {')[0].strip()
-            numb_of_line = sum(1 for line in open(f'reddit-{self.time_str}.json'))
-            with open(f'reddit-{self.time_str}.json', 'a+') as file:
-                data = file.readlines()
-                for line in data:
-                    line_dict = json.loads(line)
-                    if uid in line_dict.keys():
-                        self.wfile.write((f'{uid} - duplicates are restricted').encode("utf8"))
-                        self.send_response(301)
-                        file.close()
-                file.write(body.decode("utf-8") + "\n")
-                self.wfile.write((f'{uid}: {numb_of_line}').encode("utf8"))
+            with open(self.RESULT_FILENAME, 'a+') as file:
+                file_as_str = file.read()
+                if file_as_str.find(uid) != -1:
+                    self.wfile.write((f'{uid} - duplicates are restricted').encode("utf8"))
+                    self.send_response(301)
+                    return
+                file.write(body.decode("utf-8"))
+                sub = '": {'
+                self.wfile.write((f'{uid}: {file_as_str.count(sub)}').encode("utf8"))
 
     def do_DELETE(self):
-        line_num = self.requestline.split(' ')[1].split('/')[-1]
+        line_num = self.path.split('/')[-1]
         if self.path == f'/posts/{line_num}':
             self._set_headers('application/json')
-            with open(f'reddit-{self.time_str}.json', 'r+') as fh:
+            with open(self.RESULT_FILENAME, 'r+') as fh:
                 lines = fh.readlines()
                 fh.seek(0)
                 fh.truncate()
@@ -108,7 +103,7 @@ class StaticServer(BaseHTTPRequestHandler):
                         fh.write(line)
 
     def do_PUT(self):
-        line_num = self.requestline.split(' ')[1].split('/')[-1]
+        line_num = self.path.split('/')[-1]
         if self.path == f'/posts/{line_num}':
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])

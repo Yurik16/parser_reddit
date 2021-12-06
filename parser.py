@@ -86,16 +86,15 @@ def get_content_from_main_page(html):
             logging.warning(k_e)
             del STORE_DATA_AS_DICT[unique_id]
         try:
-            payload = {unique_id: STORE_DATA_AS_DICT[unique_id][0]}
-            requests.post('http://localhost:8000/posts/', data=json.dumps(payload),
-                          headers={"Content-Type": "application/json"})
+            post_data_as_dict = {unique_id: STORE_DATA_AS_DICT[unique_id]}
+            payload = get_list_from_dict(post_data_as_dict)
+            requests.post('http://localhost:8000/posts/', json=payload)
 
         except ConnectionError as ce:
             logging.warning(ce)
         if len(STORE_DATA_AS_DICT.keys()) >= ARGS.count:
             logging.info("Parsing data Done")
             break
-    logging.info("Parsing data Done")
 
 
 def get_users_data_from_json(u_id: str):
@@ -151,7 +150,7 @@ def drv_parse() -> None:
 
 
 def get_list_from_dict(data: dict) -> list:
-    """Convert result dict to txt
+    """Convert result dict to list
     :param data: result dict with parsing data
     :return: None
     """

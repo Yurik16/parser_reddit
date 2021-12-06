@@ -79,44 +79,52 @@ class StaticServer(BaseHTTPRequestHandler):
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
-            uid = body.decode("utf-8").split('": {')[0].strip()
+            uid = body.decode("utf-8").split(';')[0][2::]
             with open(self.RESULT_FILENAME, 'a+') as file:
+                file.seek(0)
                 file_as_str = file.read()
                 if file_as_str.find(uid) != -1:
                     self.wfile.write((f'{uid} - duplicates are restricted').encode("utf8"))
                     self.send_response(301)
                     return
-                file.write(body.decode("utf-8"))
-                sub = '": {'
-                self.wfile.write((f'{uid}: {file_as_str.count(sub)}').encode("utf8"))
+                file.write(body.decode("utf-8") + ",\n")
+                lines_count = file_as_str.count("],\n")
+                self.wfile.write((f'{uid}: {lines_count}').encode("utf8"))
 
     def do_DELETE(self):
         line_num = self.path.split('/')[-1]
         if self.path == f'/posts/{line_num}':
             self._set_headers('application/json')
-            with open(self.RESULT_FILENAME, 'r+') as fh:
-                lines = fh.readlines()
-                fh.seek(0)
-                fh.truncate()
+            with open(self.RESULT_FILENAME, 'r+') as file:
+                lines = file.readlines()
+                file.seek(0)
+                file.truncate()
                 for enum, line in enumerate(lines):
                     if enum != int(line_num):
-                        fh.write(line)
+                        file.write(line)
 
     def do_PUT(self):
-        line_num = self.path.split('/')[-1]
-        if self.path == f'/posts/{line_num}':
+        uid = self.path.split('/')[-1]
+        if self.path == f'/posts/{uid}':
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
-            with open(f'reddit-{self.time_str}.json', 'r+') as fh:
-                lines = fh.readlines()
-                fh.seek(0)
-                fh.truncate()
-                for enum, line in enumerate(lines):
-                    if enum != int(line_num):
-                        fh.write(line)
-                    else:
-                        fh.write(body.decode("utf-8") + "\n")
+            with open(self.RESULT_FILENAME, 'r+') as file:
+                file.seek(0)
+                file_as_str = file.read()
+                if file_as_str.find(uid) != -1:
+                    file.seek(0)
+                    lines = file.readlines()
+                    file.seek(0)
+                    file.truncate()
+                    for line in lines:
+                        if line.find(uid) != -1:
+                            file.write(body.decode("utf-8") + ",\n")
+                        else:
+                            file.write(line)
+                else:
+                    self.wfile.write((f'{uid} - there is on such uid at {self.RESULT_FILENAME}').encode("utf8"))
+                    self.send_response(301)
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

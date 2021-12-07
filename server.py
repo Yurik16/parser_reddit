@@ -6,15 +6,18 @@ base_path = os.path.dirname(__file__)
 
 
 class StaticServer(BaseHTTPRequestHandler):
+    """Simple HTTP server with CRUD operations. """
     time_str = str(datetime.now().strftime('%Y_%m_%d'))
     RESULT_FILENAME = f'reddit_{time_str}.txt'
 
     def _set_headers(self, content='text/html'):
+        """Setting header to the headers buffer"""
         self.send_response(200)
         self.send_header('Content-type', content, )
         self.end_headers()
 
     def do_GET(self):
+        """Handle GET request"""
         # save digits following by last '/' as variable
         row = self.path.split('/')[-1]
         if self.path == '/posts/':
@@ -34,6 +37,7 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.send_response(404)
 
     def do_POST(self):
+        """Handle POST request and saving body to txt file"""
         if self.path == '/posts/':
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])
@@ -57,6 +61,7 @@ class StaticServer(BaseHTTPRequestHandler):
                 self.send_response(201)
 
     def do_DELETE(self):
+        """Handle DELETE request"""
         # save digits following by last '/' as variable
         line_num = self.path.split('/')[-1]
         if self.path == f'/posts/{line_num}':
@@ -83,6 +88,7 @@ class StaticServer(BaseHTTPRequestHandler):
                 self.send_response(201)
 
     def do_PUT(self):
+        """Handle PUT request. Replace pointed entry with given body request"""
         # save digits following by last '/' as variable
         uid = self.path.split('/')[-1]
         if self.path == f'/posts/{uid}':

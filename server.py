@@ -25,7 +25,11 @@ class StaticServer(BaseHTTPRequestHandler):
         elif self.path == f'/posts/{uid}':
             self._set_headers('application/json')
             with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
-                self.wfile.write(fh.readlines()[int(uid.encode("utf8"))])
+                try:
+                    self.wfile.write(fh.readlines()[int(uid.encode("utf-8"))])
+                except IndexError as ie:
+                    self.wfile.write((f'no entry - {ie}').encode("utf-8"))
+                    self.send_response(404)
 
     def do_POST(self):
         if self.path == '/posts/':
@@ -37,12 +41,12 @@ class StaticServer(BaseHTTPRequestHandler):
                 file.seek(0)
                 file_as_str = file.read()
                 if file_as_str.find(uid) != -1:
-                    self.wfile.write((f'{uid} - duplicates are restricted').encode("utf8"))
+                    self.wfile.write((f'{uid} - duplicates are restricted').encode("utf-8"))
                     self.send_response(301)
                     return
                 file.write(body.decode("utf-8") + ",\n")
                 lines_count = file_as_str.count("],\n")
-                self.wfile.write((f'{uid}: {lines_count}').encode("utf8"))
+                self.wfile.write((f'{uid}: {lines_count}').encode("utf-8"))
                 self.send_response(201)
 
     def do_DELETE(self):
@@ -53,7 +57,7 @@ class StaticServer(BaseHTTPRequestHandler):
                 file.seek(0)
                 lines = file.readlines()
                 if int(line_num) not in range(0, len(lines)):
-                    self.wfile.write((f'entry {line_num} - is missing').encode("utf8"))
+                    self.wfile.write((f'entry {line_num} - is missing').encode("utf-8"))
                     self.send_response(404)
                     return
                 file.seek(0)
@@ -61,7 +65,7 @@ class StaticServer(BaseHTTPRequestHandler):
                 for enum, line in enumerate(lines):
                     if enum != int(line_num):
                         file.write(line)
-                self.wfile.write((f'entry {line_num} - now deleted').encode("utf8"))
+                self.wfile.write((f'entry {line_num} - now deleted').encode("utf-8"))
                 self.send_response(201)
 
     def do_PUT(self):
@@ -83,10 +87,10 @@ class StaticServer(BaseHTTPRequestHandler):
                             file.write(body.decode("utf-8") + ",\n")
                         else:
                             file.write(line)
-                    self.wfile.write((f'entry uid-{uid} - updated').encode("utf8"))
+                    self.wfile.write((f'entry uid-{uid} - updated').encode("utf-8"))
                     self.send_response(201)
                 else:
-                    self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf8"))
+                    self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf-8"))
                     self.send_response(404)
 
 

@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import time
 import uuid
@@ -89,7 +88,6 @@ def get_content_from_main_page(html):
             post_data_as_dict = {unique_id: STORE_DATA_AS_DICT[unique_id]}
             payload = get_list_from_dict(post_data_as_dict)
             requests.post('http://localhost:8000/posts/', json=payload)
-
         except ConnectionError as ce:
             logging.warning(ce)
         if len(STORE_DATA_AS_DICT.keys()) >= ARGS.count:
@@ -154,7 +152,7 @@ def get_list_from_dict(data: dict) -> list:
     :param data: result dict with parsing data
     :return: None
     """
-    logging.info("Convert data to list")
+    # logging.info("Convert data to list")
     result_list = []
     for key, val in data.items():
         if len(result_list) < ARGS.count:
@@ -178,17 +176,6 @@ def file_create():
     time_str = str(datetime.now().strftime("%Y%m%D%H%M").replace("/", ""))
     with open(f'{ARGS.filepath}reddit-{time_str}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join(get_list_from_dict(STORE_DATA_AS_DICT)))
-
-
-def file_create_by_server(uid: str):
-    logging.info("Save data to json by server")
-    try:
-        payload = {uid: STORE_DATA_AS_DICT[uid][0]}
-        requests.post('http://localhost:8000/posts/', data=json.dumps(payload),
-                      headers={"Content-Type": "application/json"})
-
-    except ConnectionError as ce:
-        logging.warning(ce)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -42,9 +43,10 @@ class StaticServer(BaseHTTPRequestHandler):
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
-            # gets unique id by splitting body/row and missing first 2 symbols
-            uid = body.decode("utf-8").split(';')[0][2::]
-            with open(self.RESULT_FILENAME, 'a+') as file:
+            # get unique id by deserialize body and pick "data"-key
+            uid = "".join(json.loads(body)["data"].keys())
+            file_path = "".join(json.loads(body)["metadata"].values())
+            with open(f'{file_path}{self.RESULT_FILENAME}', 'a+') as file:
                 # change position of cursor to start of file
                 file.seek(0)
                 # save to variable whole file as a string
@@ -54,9 +56,10 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.wfile.write((f'{uid} - duplicates are restricted').encode("utf-8"))
                     self.send_response(301)
                     return
-                file.write(body.decode("utf-8") + ",\n")
+                body_as_str_to_file = self.get_list_from_dict(json.loads(body)["data"])
+                file.write(body_as_str_to_file + ",\n")
                 # finding coincidence counts instead counting rows
-                lines_count = file_as_str.count("],\n")
+                lines_count = file_as_str.count("\n")
                 self.wfile.write((f'{uid}: {lines_count}').encode("utf-8"))
                 self.send_response(201)
 
@@ -118,6 +121,27 @@ class StaticServer(BaseHTTPRequestHandler):
                 else:
                     self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf-8"))
                     self.send_response(404)
+
+    def get_list_from_dict(self, data: dict) -> str:
+        """Convert dict to string
+        :param data: dict with parsing data
+        :return: None
+        """
+        # logging.info("Convert data to list")
+        result_str = "".join(f'{key};' +
+                             f' https://www.reddit.com/{val["post_link"]};' +
+                             f' {val["username"]};' +
+                             f' {val["total_karma"]};' +
+                             f' {val["cake_day"]};' +
+                             f' {val["link_karma"]};' +
+                             f' {val["comment_karma"]};' +
+                             f' {val["post_date"]};' +
+                             f' {val["Number_of_comments"]};' +
+                             f' {val["post_votes"]};' +
+                             f' {val["post_category"]};'
+                             for key, val in data.items()
+                             )
+        return result_str
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

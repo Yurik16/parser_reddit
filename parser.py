@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import time
 import uuid
@@ -85,9 +86,9 @@ def get_content_from_main_page(html):
             logging.warning(k_e)
             del STORE_DATA_AS_DICT[unique_id]
         try:
-            post_data_as_dict = {unique_id: STORE_DATA_AS_DICT[unique_id]}
-            payload = get_list_from_dict(post_data_as_dict)
-            requests.post('http://localhost:8000/posts/', json=payload)
+            payload = json.dumps(
+                {"data": {unique_id: STORE_DATA_AS_DICT[unique_id][0]}, "metadata": {"filepath": ARGS.filepath}})
+            requests.post('http://localhost:8000/posts/', data=payload)
         except ConnectionError as ce:
             logging.warning(ce)
         if len(STORE_DATA_AS_DICT.keys()) >= ARGS.count:

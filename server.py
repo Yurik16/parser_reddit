@@ -20,20 +20,33 @@ class StaticServer(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET request"""
         # save digits following by last '/' as variable
-        row = self.path.split('/')[-1]
+        url_end = self.path.split('/')[-1]
         if self.path == '/posts/':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
                 for each in fh:
                     self.wfile.write(each)
                     self.wfile.write(f'\n'.encode("utf-8"))
-        elif self.path == f'/posts/{row}':
+        elif self.path == f'/posts/row/{url_end}':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
                 # write to response body row number 'row' from file handler 'fh'
                 try:
-                    self.wfile.write(fh.readlines()[int(row.encode("utf-8"))])
-                except IndexError as ie:
+                    self.wfile.write(fh.readlines()[int(url_end)])
+                    self.send_response(201)
+                except (ValueError, IndexError) as ie:
+                    self.wfile.write((f'no entry - {ie}').encode("utf-8"))
+                    self.send_response(404)
+        elif self.path == f'/posts/{url_end}':
+            self._set_headers('application/json')
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
+                any_list = []
+                try:
+                    for line in fh:
+                        any_list.append(json.loads(line))
+                    # self.wfile.write(file_as_json[url_end].encode("utf-8"))
+                    self.send_response(201)
+                except (ValueError, IndexError) as ie:
                     self.wfile.write((f'no entry - {ie}').encode("utf-8"))
                     self.send_response(404)
 
@@ -56,8 +69,8 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.wfile.write((f'{uid} - duplicates are restricted').encode("utf-8"))
                     self.send_response(301)
                     return
-                body_as_str_to_file = self.get_list_from_dict(json.loads(body)["data"])
-                file.write(body_as_str_to_file + ",\n")
+                # body_as_str_to_file = self.get_list_from_dict(json.loads(body)["data"])
+                file.write(f'{json.loads(body)["data"]},\n')
                 # finding coincidence counts instead counting rows
                 lines_count = file_as_str.count("\n")
                 self.wfile.write((f'{uid}: {lines_count}').encode("utf-8"))
@@ -122,7 +135,8 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf-8"))
                     self.send_response(404)
 
-    def get_list_from_dict(self, data: dict) -> str:
+    @staticmethod
+    def get_list_from_dict(data: dict) -> str:
         """Convert dict to string
         :param data: dict with parsing data
         :return: None
@@ -142,6 +156,15 @@ class StaticServer(BaseHTTPRequestHandler):
                              for key, val in data.items()
                              )
         return result_str
+
+    @staticmethod
+    def is_uid(var: str) -> bool:
+        return (len(var) == 36) and (len(var.split("-")) == 5)
+
+    def is_uid_in_file(self, var: str) -> bool:
+        with open(self.RESULT_FILENAME, "r") as file:
+            file_as_str = file.read()
+            return file_as_str.find(var) > -1
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

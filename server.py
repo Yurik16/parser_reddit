@@ -20,20 +20,31 @@ class StaticServer(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET request"""
         # save digits following by last '/' as variable
-        row = self.path.split('/')[-1]
+        url_end = self.path.split('/')[-1]
         if self.path == '/posts/':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
                 for each in fh:
-                    self.wfile.write(each)
+                    self.wfile.write(each.encode("utf-8"))
                     self.wfile.write(f'\n'.encode("utf-8"))
-        elif self.path == f'/posts/{row}':
+        elif self.path == f'/posts/row/{url_end}':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'rb') as fh:
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
                 # write to response body row number 'row' from file handler 'fh'
                 try:
-                    self.wfile.write(fh.readlines()[int(row.encode("utf-8"))])
-                except IndexError as ie:
+                    self.wfile.write(fh.readlines()[int(url_end)].encode("utf-8"))
+                    self.send_response(201)
+                except (ValueError, IndexError) as ie:
+                    self.wfile.write((f'no entry - {ie}').encode("utf-8"))
+                    self.send_response(404)
+        elif self.path == f'/posts/{url_end}':
+            self._set_headers('application/json')
+            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
+                try:
+                    any_list = [line for line in fh if line.find(url_end) != -1]
+                    self.wfile.write(any_list[0].encode("utf-8"))
+                    self.send_response(201)
+                except (ValueError, IndexError) as ie:
                     self.wfile.write((f'no entry - {ie}').encode("utf-8"))
                     self.send_response(404)
 
@@ -56,8 +67,8 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.wfile.write((f'{uid} - duplicates are restricted').encode("utf-8"))
                     self.send_response(301)
                     return
-                body_as_str_to_file = self.get_list_from_dict(json.loads(body)["data"])
-                file.write(body_as_str_to_file + ",\n")
+                # body_as_str_to_file = self.get_list_from_dict(json.loads(body)["data"])
+                file.write(f'{json.loads(body)["data"]},\n')
                 # finding coincidence counts instead counting rows
                 lines_count = file_as_str.count("\n")
                 self.wfile.write((f'{uid}: {lines_count}').encode("utf-8"))
@@ -66,28 +77,24 @@ class StaticServer(BaseHTTPRequestHandler):
     def do_DELETE(self):
         """Handle DELETE request"""
         # save digits following by last '/' as variable
-        line_num = self.path.split('/')[-1]
-        if self.path == f'/posts/{line_num}':
-            self._set_headers('application/json')
+        uid = self.path.split('/')[-1]
+        if self.path == f'/posts/{uid}':
+            self._set_headers()
             with open(self.RESULT_FILENAME, 'r+') as file:
-                # change position of cursor to start of file
-                file.seek(0)
-                # gets list of entries
-                lines = file.readlines()
-                # checking is there a given number among of entries
-                if int(line_num) not in range(0, len(lines)):
-                    self.wfile.write((f'entry {line_num} - is missing').encode("utf-8"))
+                if not self.is_uid_in_file(uid):
+                    self.wfile.write((f'entry {uid} - is missing').encode("utf-8"))
                     self.send_response(404)
                     return
                 # change position of cursor to start of file
+                file_as_list = file.readlines()
                 file.seek(0)
                 # cut file to cursor - erase all data
                 file.truncate()
-                # recreate all file from lines variable but without entry what needs to delete
-                for enum, line in enumerate(lines):
-                    if enum != int(line_num):
+                # recreate all file but without entry what needs to delete
+                for line in file_as_list:
+                    if line.find(uid) == -1:
                         file.write(line)
-                self.wfile.write((f'entry {line_num} - now deleted').encode("utf-8"))
+                self.wfile.write((f'entry {uid} - now deleted').encode("utf-8"))
                 self.send_response(201)
 
     def do_PUT(self):
@@ -99,19 +106,14 @@ class StaticServer(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
             with open(self.RESULT_FILENAME, 'r+') as file:
-                # change position of cursor to start of file
-                file.seek(0)
-                # save to variable whole file as a string
-                file_as_str = file.read()
-                # checking is uid look like uuid and finding coincidence - is uid-string in file
-                if len(uid) > 35 and file_as_str.find(uid) != -1:
+                if self.is_uid(uid) and self.is_uid_in_file(uid):
+                    # change position of cursor to start of file
+                    file_as_list = file.readlines()
                     file.seek(0)
-                    # gets list of entries
-                    lines = file.readlines()
-                    file.seek(0)
+                    # cut file to cursor - erase all data
                     file.truncate()
                     # recreate all file from lines variable and replace looking uid/entry with given body
-                    for line in lines:
+                    for line in file_as_list:
                         if line.find(uid) != -1:
                             file.write(body.decode("utf-8") + ",\n")
                         else:
@@ -122,7 +124,8 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf-8"))
                     self.send_response(404)
 
-    def get_list_from_dict(self, data: dict) -> str:
+    @staticmethod
+    def get_list_from_dict(data: dict) -> str:
         """Convert dict to string
         :param data: dict with parsing data
         :return: None
@@ -142,6 +145,15 @@ class StaticServer(BaseHTTPRequestHandler):
                              for key, val in data.items()
                              )
         return result_str
+
+    @staticmethod
+    def is_uid(var: str) -> bool:
+        return (len(var) == 36) and (len(var.split("-")) == 5)
+
+    def is_uid_in_file(self, var: str) -> bool:
+        with open(self.RESULT_FILENAME, "r") as file:
+            file_as_str = file.read()
+            return file_as_str.find(var) > -1
 
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):

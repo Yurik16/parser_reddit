@@ -40,7 +40,7 @@ def driver_init() -> "driver":
     return driver
 
 
-def argparse_init(num_of_posts=10, filepath="") -> "args":
+def argparse_init(num_of_posts=50, filepath="") -> "args":
     """Init argparse module
     :param num_of_posts:
     :param filepath:
@@ -81,10 +81,12 @@ def get_content_from_main_page(html):
         except AttributeError as e:
             # Catch errors (if Live Stream or 18+) and exclude that unit from result data
             logging.warning(e or "Data error - Post data incorrect")
-            del STORE_DATA_AS_DICT[unique_id]
+            STORE_DATA_AS_DICT.pop(unique_id)
+            continue
         except KeyError as k_e:
             logging.warning(k_e)
-            del STORE_DATA_AS_DICT[unique_id]
+            STORE_DATA_AS_DICT.pop(unique_id)
+            continue
         try:
             payload = json.dumps(
                 {"data": {unique_id: STORE_DATA_AS_DICT[unique_id][0]}, "metadata": {"filepath": ARGS.filepath}})

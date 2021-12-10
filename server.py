@@ -25,14 +25,14 @@ class StaticServer(BaseHTTPRequestHandler):
             self._set_headers('application/json')
             with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
                 for each in fh:
-                    self.wfile.write(each)
+                    self.wfile.write(each.encode("utf-8"))
                     self.wfile.write(f'\n'.encode("utf-8"))
         elif self.path == f'/posts/row/{url_end}':
             self._set_headers('application/json')
             with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
                 # write to response body row number 'row' from file handler 'fh'
                 try:
-                    self.wfile.write(fh.readlines()[int(url_end)])
+                    self.wfile.write(fh.readlines()[int(url_end)].encode("utf-8"))
                     self.send_response(201)
                 except (ValueError, IndexError) as ie:
                     self.wfile.write((f'no entry - {ie}').encode("utf-8"))
@@ -40,11 +40,9 @@ class StaticServer(BaseHTTPRequestHandler):
         elif self.path == f'/posts/{url_end}':
             self._set_headers('application/json')
             with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
-                any_list = []
                 try:
-                    for line in fh:
-                        any_list.append(json.loads(line))
-                    # self.wfile.write(file_as_json[url_end].encode("utf-8"))
+                    any_list = [line for line in fh if line.find(url_end) != -1]
+                    self.wfile.write(any_list[0].encode("utf-8"))
                     self.send_response(201)
                 except (ValueError, IndexError) as ie:
                     self.wfile.write((f'no entry - {ie}').encode("utf-8"))
@@ -100,7 +98,7 @@ class StaticServer(BaseHTTPRequestHandler):
                 for enum, line in enumerate(lines):
                     if enum != int(line_num):
                         file.write(line)
-                self.wfile.write((f'entry {line_num} - now deleted').encode("utf-8"))
+                self.wfile.write((f'entry {uid} - now deleted').encode("utf-8"))
                 self.send_response(201)
 
     def do_PUT(self):

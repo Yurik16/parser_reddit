@@ -77,26 +77,22 @@ class StaticServer(BaseHTTPRequestHandler):
     def do_DELETE(self):
         """Handle DELETE request"""
         # save digits following by last '/' as variable
-        line_num = self.path.split('/')[-1]
-        if self.path == f'/posts/{line_num}':
+        uid = self.path.split('/')[-1]
+        if self.path == f'/posts/{uid}':
             self._set_headers('application/json')
             with open(self.RESULT_FILENAME, 'r+') as file:
-                # change position of cursor to start of file
-                file.seek(0)
-                # gets list of entries
-                lines = file.readlines()
-                # checking is there a given number among of entries
-                if int(line_num) not in range(0, len(lines)):
-                    self.wfile.write((f'entry {line_num} - is missing').encode("utf-8"))
+                if not self.is_uid_in_file(uid):
+                    self.wfile.write((f'entry {uid} - is missing').encode("utf-8"))
                     self.send_response(404)
                     return
+                file_as_list = file.readlines()
                 # change position of cursor to start of file
                 file.seek(0)
                 # cut file to cursor - erase all data
                 file.truncate()
-                # recreate all file from lines variable but without entry what needs to delete
-                for enum, line in enumerate(lines):
-                    if enum != int(line_num):
+                # recreate all file but without entry what needs to delete
+                for line in file_as_list:
+                    if line.find(uid) == -1:
                         file.write(line)
                 self.wfile.write((f'entry {uid} - now deleted').encode("utf-8"))
                 self.send_response(201)

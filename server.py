@@ -85,9 +85,9 @@ class StaticServer(BaseHTTPRequestHandler):
                     self.wfile.write((f'entry {uid} - is missing').encode("utf-8"))
                     self.send_response(404)
                     return
-                file_as_list = file.readlines()
                 # change position of cursor to start of file
                 file.seek(0)
+                file_as_list = file.readlines()
                 # cut file to cursor - erase all data
                 file.truncate()
                 # recreate all file but without entry what needs to delete
@@ -106,19 +106,14 @@ class StaticServer(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
             with open(self.RESULT_FILENAME, 'r+') as file:
-                # change position of cursor to start of file
-                file.seek(0)
-                # save to variable whole file as a string
-                file_as_str = file.read()
-                # checking is uid look like uuid and finding coincidence - is uid-string in file
-                if len(uid) > 35 and file_as_str.find(uid) != -1:
+                if self.is_uid(uid) and self.is_uid_in_file(uid):
+                    # change position of cursor to start of file
+                    file_as_list = file.readlines()
                     file.seek(0)
-                    # gets list of entries
-                    lines = file.readlines()
-                    file.seek(0)
+                    # cut file to cursor - erase all data
                     file.truncate()
                     # recreate all file from lines variable and replace looking uid/entry with given body
-                    for line in lines:
+                    for line in file_as_list:
                         if line.find(uid) != -1:
                             file.write(body.decode("utf-8") + ",\n")
                         else:

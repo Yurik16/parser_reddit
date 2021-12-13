@@ -14,4 +14,4 @@ class BaseModel(Base):
     updated_at = Column(TIMESTAMP, nullable=False, default=datetime.datetime.now(), onupdate=datetime.datetime.now())
 
     def __repr__(self):
-        return f"<{type(self).__name__}(id={self.id})>"
+        return f'<{type(self).__name__}(id={self.id})>'

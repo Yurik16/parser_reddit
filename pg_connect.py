@@ -1,29 +1,34 @@
 import psycopg2
-from psycopg2 import Error
+from config import config
 
-try:
-    # Connect to an existing database
-    connection = psycopg2.connect(user="postgres",
-                                  password="dbpass",
-                                  host="localhost",
-                                  port="5432",
-                                  database="postgres")
 
-    # Create a cursor to perform database operations
-    cursor = connection.cursor()
-    # Print PostgreSQL details
-    print("PostgreSQL server information")
-    print(connection.get_dsn_parameters(), "\n")
-    # Executing a SQL query
-    cursor.execute("SELECT version();")
-    # Fetch result
-    record = cursor.fetchone()
-    print("You are connected to - ", record, "\n")
+def connect():
+    """ Connect to the PostgreSQL database server """
 
-except (Exception, Error) as error:
-    print("Error while connecting to PostgreSQL", error)
-finally:
-    if (connection):
-        cursor.close()
-        connection.close()
-        print("PostgreSQL connection is closed")
+    conn = None
+    try:
+        params = config()
+
+        # connect to the PostgreSQL server
+        print('Connecting to the PostgreSQL database...')
+        conn = psycopg2.connect(**params)
+        cur = conn.cursor()
+
+        # execute a statement
+        print('PostgreSQL database version:')
+        cur.execute('SELECT version()')
+
+        # display the PostgreSQL database server version
+        db_version = cur.fetchone()
+        print(db_version)
+        cur.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+    finally:
+        if conn is not None:
+            conn.close()
+            print('Database connection closed.')
+
+
+if __name__ == '__main__':
+    connect()

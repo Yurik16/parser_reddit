@@ -1,4 +1,5 @@
 import json
+import pprint
 from datetime import datetime
 
 import psycopg2
@@ -64,7 +65,7 @@ def create_table_posts():
             print(error)
 
 
-def insert_user(user_name: str, total_carma: int, comment_carma: int, cake_day: datetime):
+def insert_user(user_name: str, total_carma: int, comment_carma: int, cake_day: str):
     """Insertion a new user into pg_users table"""
     cmd = "INSERT INTO pg_users (user_name, total_carma, comment_carma, cake_day) VALUES (%s, %s, %s, %s)"
     is_duplicate = "SELECT count(*) FROM pg_users WHERE user_name LIKE %s"
@@ -82,7 +83,7 @@ def insert_user(user_name: str, total_carma: int, comment_carma: int, cake_day: 
 
 
 def insert_post(uid: str, author: str, post_category: str, post_link: str, number_of_comments: int, post_votes: int,
-                post_date: datetime):
+                post_date: str):
     """Insertion a new post into pg_posts table"""
     cmd = "INSERT INTO pg_posts (" \
           "post_uid, author, post_category, post_link, number_of_comments, post_votes, post_date" \
@@ -113,6 +114,7 @@ def get_all_entry() -> str:
     """Get all data from db"""
     cmd = "SELECT * FROM pg_posts as p JOIN pg_users as u" \
           " ON p.author = u.user_id"
+
     params = config()
     connection = psycopg2.connect(**params)
     with connection:
@@ -123,24 +125,33 @@ def get_all_entry() -> str:
         return json.dumps(to_list)
 
 
-def get_one_entry(id: int) -> str:
+def get_one_entry(uid: str) -> str:
     cmd = "SELECT * FROM pg_posts as p JOIN pg_users as u" \
-          " ON p.author = u.user_id WHERE "
+          " ON p.author = u.user_id WHERE p.post_uid LIKE %s"
     params = config()
     connection = psycopg2.connect(**params)
     with connection:
         cursor = connection.cursor()
-        cursor.execute(cmd)
-        result = cursor.fetchall()
-        to_list = [[f'{elem}' for elem in entry] for entry in result]
-        return json.dumps(to_list)
+        try:
+            cursor.execute(cmd, (uid,))
+            result = cursor.fetchone()
+            to_list = [f'{elem}' for elem in result]
+            return json.dumps(to_list)
+        except Exception as e:
+            print(e)
 
 
 create_table_posts()
 create_table_users()
 insert_user('second_user', 2000, 20, datetime(2021, 12, 12).strftime('%Y/%m/%d'))
+insert_user('first_user', 1001, 11, datetime(2011, 1, 1).strftime('%Y/%m/%d'))
 insert_user('new_user', 3000, 30, datetime(2020, 11, 11).strftime('%Y/%m/%d'))
 insert_post("df8aef88", "second_user", "post_category", "post_link1", 22, 33, datetime.now().strftime('%Y/%m/%d'))
 insert_post("df7aef87", "new_user", "category", "post_link4", 24, 32, datetime.now().strftime('%Y/%m/%d'))
 insert_post("df6aef86", "first_user", "post_category", "post_link2", 22, 33, datetime.now().strftime('%Y/%m/%d'))
-print(get_all_entry())
+
+lst = (print(el + "\n") for el in get_all_entry().split("],"))
+while True:
+    if next(lst, "stop") == "stop":
+        break
+print(get_one_entry("df6aef86"))

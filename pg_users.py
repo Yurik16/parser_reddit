@@ -110,8 +110,8 @@ def insert_post(uid: str, author: str, post_category: str, post_link: str, numbe
             print(e)
 
 
-def get_all_entry() -> str:
-    """Get all data from db"""
+def get_all_entry() -> list:
+    """Get all data from postgre DB"""
     cmd = "SELECT * FROM pg_posts as p JOIN pg_users as u" \
           " ON p.author = u.user_id"
 
@@ -122,7 +122,7 @@ def get_all_entry() -> str:
         cursor.execute(cmd)
         result = cursor.fetchall()
         to_list = [[f'{elem}' for elem in entry] for entry in result]
-        return json.dumps(to_list)
+        return to_list
 
 
 def get_one_entry(uid: str) -> str:
@@ -138,7 +138,33 @@ def get_one_entry(uid: str) -> str:
             to_list = [f'{elem}' for elem in result]
             return json.dumps(to_list)
         except Exception as e:
-            print(e)
+            print(f'There is no such element in DB - {uid} ' + str(e))
+
+
+def delete_post(uid: str):
+    """Delete entry from postgre DB"""
+    cmd = "DELETE FROM pg_posts WHERE post_uid LIKE %s"
+    params = config()
+    connection = psycopg2.connect(**params)
+    with connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute(cmd, (uid,))
+        except Exception as e:
+            print(f'There is no such element in DB - {uid} ' + str(e))
+
+
+def update_post(uid: str, val: list):
+    """Update entry at postgre DB"""
+    cmd = "UPDATE pg_posts SET post_category = "
+    params = config()
+    connection = psycopg2.connect(**params)
+    with connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute(cmd, (uid,))
+        except Exception as e:
+            print(f'There is no such element in DB - {uid} ' + str(e))
 
 
 create_table_posts()
@@ -150,8 +176,7 @@ insert_post("df8aef88", "second_user", "post_category", "post_link1", 22, 33, da
 insert_post("df7aef87", "new_user", "category", "post_link4", 24, 32, datetime.now().strftime('%Y/%m/%d'))
 insert_post("df6aef86", "first_user", "post_category", "post_link2", 22, 33, datetime.now().strftime('%Y/%m/%d'))
 
-lst = (print(el + "\n") for el in get_all_entry().split("],"))
-while True:
-    if next(lst, "stop") == "stop":
-        break
+print(get_all_entry())
+
+delete_post("df6aef86")
 print(get_one_entry("df6aef86"))

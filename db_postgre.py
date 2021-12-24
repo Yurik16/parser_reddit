@@ -1,20 +1,27 @@
-import json
-import pprint
 from datetime import datetime
-
+from configparser import ConfigParser
 import psycopg2
 
 from pg_connect import config
 
 
-class UserTable:
+class PostgreDB:
 
-    def __init__(self):
-        self.user_id = 'user_id'
-        self.user_name = 'user_name'
-        self.total_carma = 'total_carma'
-        self.comment_carma = 'comment_carma'
-        self.cake_day = 'cake_day'
+    def __init__(self, filename='database.ini', section='postgresql'):
+        self.db = {}
+        self.filename = filename
+        self.section = section
+        self.parser = ConfigParser()
+        self.parser.read(self.filename)
+
+    def config(self) -> dict:
+        if self.parser.has_section(self.section):
+            params = self.parser.items(self.section)
+            for param in params:
+                self.db[param[0]] = param[1]
+        else:
+            raise Exception(f"Section {self.section} not found in the {self.filename} file")
+        return self.db
 
 
 def create_table_users():
@@ -25,9 +32,8 @@ def create_table_users():
         user_name VARCHAR(50) NOT NULL,
         total_carma INTEGER NOT NULL,
         comment_carma INTEGER NOT NULL,
-        cake_day DATE NOT NULL);
+        cake_day DATE NOT NULL)
         """
-    conn = None
     params = config()
     conn = psycopg2.connect(**params)
     with conn:

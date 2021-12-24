@@ -72,7 +72,7 @@ class PostgreDB:
             except (Exception, psycopg2.DatabaseError) as error:
                 print(error)
 
-    def insert_user(self, user_name: str, total_carma: int, comment_carma: int, cake_day: str):
+    def insert_user(self, user_name: str, total_carma: int, comment_carma: int, cake_day: str) -> None:
         """Insertion a new user into pg_users table"""
         cmd = "INSERT INTO pg_users (user_name, total_carma, comment_carma, cake_day) VALUES (%s, %s, %s, %s)"
         is_duplicate = "SELECT count(*) FROM pg_users WHERE user_name LIKE %s"
@@ -88,8 +88,7 @@ class PostgreDB:
             cursor.execute(cmd, (user_name, total_carma, comment_carma, cake_day))
 
     def insert_post(self, uid: str, author: str, post_category: str, post_link: str, number_of_comments: int,
-                    post_votes: int,
-                    post_date: str):
+                    post_votes: int, post_date: str) -> None:
         """Insertion a new post into pg_posts table"""
         cmd = "INSERT INTO pg_posts (" \
               "post_uid, author, post_category, post_link, number_of_comments, post_votes, post_date" \
@@ -150,7 +149,7 @@ class PostgreDB:
             except Exception as e:
                 print(f'There is no such element in DB - {uid} ' + str(e))
 
-    def delete_post(self, uid: str):
+    def delete_post(self, uid: str) -> None:
         """Delete entry from postgre DB"""
         cmd = "DELETE FROM pg_posts WHERE post_uid LIKE %s"
         connection = self.connection_to_db()
@@ -161,7 +160,7 @@ class PostgreDB:
             except Exception as e:
                 print(f'There is no such element in DB - {uid} ' + str(e))
 
-    def update_post(self, uid: str, val: list):
+    def update_post(self, uid: str, val: list) -> None:
         """Update post in pg_posts"""
         i_gen = (item for item in val)
         cmd = f"UPDATE pg_posts SET post_uid='{next(i_gen)}', author={next(i_gen)}, post_category='{next(i_gen)}', " \
@@ -176,7 +175,7 @@ class PostgreDB:
             except Exception as e:
                 print(f'There is no such post_uid in DB - {uid} ' + str(e))
 
-    def update_user(self, user: str, val: list):
+    def update_user(self, user: str, val: list) -> None:
         """Update user in gp_users"""
         i_gen = (item for item in val)
         cmd = f"UPDATE pg_users SET user_name='{next(i_gen)}', total_carma={next(i_gen)}, " \

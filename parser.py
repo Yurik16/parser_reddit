@@ -40,7 +40,7 @@ def driver_init() -> "driver":
     return driver
 
 
-def argparse_init(num_of_posts=50, filepath="") -> "args":
+def argparse_init(num_of_posts=20, filepath="") -> "args":
     """Init argparse module
     :param num_of_posts:
     :param filepath:
@@ -72,7 +72,7 @@ def get_content_from_main_page(html):
                 "post_category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
                 "post_date": (datetime.today() - timedelta(
                     int(post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text.split(' ')[0]))).strftime('%Y/%m/%d'),
-                "Number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
+                "number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
                 "post_votes": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
                 "user_link": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE')['href'],
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
@@ -89,7 +89,10 @@ def get_content_from_main_page(html):
             continue
         try:
             payload = json.dumps(
-                {"data": {unique_id: STORE_DATA_AS_DICT[unique_id][0]}, "metadata": {"filepath": ARGS.filepath}})
+                # this for saving data at simple file
+                # {"data": {unique_id: STORE_DATA_AS_DICT[unique_id][0]}, "metadata": {"filepath": ARGS.filepath}}
+                {unique_id: STORE_DATA_AS_DICT[unique_id][0]}
+            )
             requests.post('http://localhost:8000/posts/', data=payload)
         except ConnectionError as ce:
             logging.warning(ce)
@@ -167,7 +170,7 @@ def get_list_from_dict(data: dict) -> list:
                                f' {val[0]["link_karma"]};' +
                                f' {val[0]["comment_karma"]};' +
                                f' {val[0]["post_date"]};' +
-                               f' {val[0]["Number_of_comments"]};' +
+                               f' {val[0]["number_of_comments"]};' +
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )

@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from db_postgre import PostgreDB
 
 base_path = os.path.dirname(__file__)
 
@@ -55,24 +56,49 @@ class StaticServer(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
             # get unique id by deserialize body and pick "data"-key
-            uid = "".join(json.loads(body)["data"].keys())
-            file_path = "".join(json.loads(body)["metadata"].values())
-            with open(f'{file_path}{self.RESULT_FILENAME}', 'a+') as file:
-                # change position of cursor to start of file
-                file.seek(0)
-                # save to variable whole file as a string
-                file_as_str = file.read()
-                # finding coincidence - is uid-string in file
-                if file_as_str.find(uid) != -1:
-                    self.wfile.write((f'{uid} - duplicates are restricted').encode("utf-8"))
-                    self.send_response(301)
-                    return
-                # body_as_str_to_file = self.get_list_from_dict(json.loads(body)["data"])
-                file.write(f'{json.loads(body)["data"]},\n')
-                # finding coincidence counts instead counting rows
-                lines_count = file_as_str.count("\n")
-                self.wfile.write((f'{uid}: {lines_count}').encode("utf-8"))
-                self.send_response(201)
+            uid = "".join(json.loads(body).keys())
+
+            body_value = dict(list(json.loads(body).values())[0])
+
+            str_type = str(type(body_value))
+            pg_database = PostgreDB()
+            pg_database.create_table_users()
+            pg_database.create_table_posts()
+            user_atr = [val for key, val in body_value.items() if key.find("user_") != -1]
+            post_atr = [val for key, val in body_value.items() if key.find("post_") != -1 or key.find("user_name") == 0]
+            pg_database.insert_user(
+                body_value["username"],
+                body_value["user_link"],
+                body_value["total_karma"],
+                body_value["comment_karma"],
+                body_value["link_karma"],
+                body_value["cake_day"]
+            )
+            pg_database.insert_post(
+                uid,
+                body_value["username"],
+                body_value["post_category"],
+                body_value["post_date"],
+                body_value["number_of_comments"],
+                body_value["post_votes"],
+                body_value["post_link"]
+            )
+            self.wfile.write((f'{uid}: {body_value}').encode("utf-8"))
+            # with open(f'{self.RESULT_FILENAME}', 'a+') as file:
+            #     # change position of cursor to start of file
+            #     file.seek(0)
+            #     # save to variable whole file as a string
+            #     file_as_str = file.read()
+            #     # finding coincidence - is uid-string in file
+            #     if file_as_str.find(uid) != -1:
+            #         self.wfile.write((f'{uid} - duplicates are restricted').encode("utf-8"))
+            #         self.send_response(301)
+            #         return
+            #     file.write(f'{json.loads(body)},\n')
+            #     # finding coincidence counts instead counting rows
+            #     lines_count = file_as_str.count("\n")
+            #     self.wfile.write((f'{uid}: {lines_count}').encode("utf-8"))
+            #     self.send_response(201)
 
     def do_DELETE(self):
         """Handle DELETE request"""

@@ -60,7 +60,7 @@ class StaticServer(BaseHTTPRequestHandler):
 
             body_value = dict(list(json.loads(body).values())[0])
 
-            str_type = str(type(body_value))
+            str_type = str(type(json.loads(body).values()))
             pg_database = PostgreDB()
             pg_database.create_table_users()
             pg_database.create_table_posts()

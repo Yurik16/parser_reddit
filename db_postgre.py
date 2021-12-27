@@ -1,6 +1,5 @@
+import logging
 from configparser import ConfigParser
-from datetime import datetime
-
 import psycopg2
 
 
@@ -12,6 +11,7 @@ class PostgreDB:
         self.section = section
         self.parser = ConfigParser()
         self.parser.read(self.filename)
+        self.logging_init()
 
     def config(self) -> dict:
         """Setting db connection parameters"""
@@ -22,6 +22,12 @@ class PostgreDB:
         else:
             raise Exception(f"Section {self.section} not found in the {self.filename} file")
         return self.db
+
+    def logging_init(self) -> None:
+        """Init logging"""
+        logging.basicConfig(filename="log.txt", filemode='a',
+                            format='%(asctime)s :: %(levelname)s :: %(funcName)s :: %(lineno)d :: %(message)s',
+                            level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
 
     def connection_to_db(self) -> 'connection':
         """Connect to the suppliers db"""
@@ -47,7 +53,7 @@ class PostgreDB:
             try:
                 cursor.execute(command)
             except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
+                logging.warning(error)
 
     def create_table_posts(self) -> None:
         """Create table pg_posts in the PostgreSQL database"""
@@ -72,7 +78,7 @@ class PostgreDB:
             try:
                 cursor.execute(command)
             except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
+                logging.warning(error)
 
     def insert_user(self, user_name: str, user_link: str, total_karma: int, comment_karma: int, link_karma: int,
                     cake_day: str) -> None:
@@ -87,7 +93,7 @@ class PostgreDB:
             cursor.execute(is_duplicate, (user_name,))
             count_of_duplicate = cursor.fetchone()
             if count_of_duplicate[0]:
-                print("duplicates detected")
+                logging.warning("duplicates detected")
                 return
             cursor.execute(cmd, (user_name, user_link, total_karma, comment_karma, link_karma, cake_day))
 
@@ -106,16 +112,16 @@ class PostgreDB:
             cursor.execute(is_duplicate, (post_link,))
             count_of_duplicate = cursor.fetchone()
             if count_of_duplicate[0]:
-                print("duplicates detected")
+                logging.warning("duplicates detected")
                 return
             try:
                 cursor.execute(user_id_is, (author,))
                 user_id = cursor.fetchone()[0]
                 cursor.execute(cmd, (uid, user_id, post_category, post_date, number_of_comments, post_votes, post_link))
             except TypeError as te:
-                print(f'There is no "{author}" user at db')
+                logging.warning(f'There is no "{author}" user at db')
             except Exception as e:
-                print(e)
+                logging.warning(e)
 
     def get_all_entry(self) -> list:
         """Get all data from postgre DB"""
@@ -151,7 +157,7 @@ class PostgreDB:
                 to_list = [f'{elem}' for elem in result]
                 return to_list
             except Exception as e:
-                print(f'There is no such element in DB - {uid} ' + str(e))
+                logging.warning(f'There is no such element in DB - {uid} ' + str(e))
 
     def delete_post(self, uid: str) -> None:
         """Delete entry from postgre DB"""
@@ -162,7 +168,7 @@ class PostgreDB:
             try:
                 cursor.execute(cmd, (uid,))
             except Exception as e:
-                print(f'There is no such element in DB - {uid} ' + str(e))
+                logging.warning(f'There is no such element in DB - {uid} ' + str(e))
 
     def update_post(self, uid: str, val: list) -> None:
         """Update post in pg_posts"""
@@ -177,7 +183,7 @@ class PostgreDB:
             try:
                 cursor.execute(cmd, (uid,))
             except Exception as e:
-                print(f'There is no such post_uid in DB - {uid} ' + str(e))
+                logging.warning(f'There is no such post_uid in DB - {uid} ' + str(e))
 
     def update_user(self, user: str, val: list) -> None:
         """Update user in gp_users"""
@@ -191,7 +197,7 @@ class PostgreDB:
             try:
                 cursor.execute(cmd, (user,))
             except Exception as e:
-                print(f'There is no such user_name in DB - {user} ' + str(e))
+                logging.warning(f'There is no such user_name in DB - {user} ' + str(e))
 
 # postgre_db = PostgreDB()
 # postgre_db.create_table_posts()

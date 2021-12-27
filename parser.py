@@ -40,7 +40,7 @@ def driver_init() -> "driver":
     return driver
 
 
-def argparse_init(num_of_posts=20, filepath="") -> "args":
+def argparse_init(num_of_posts=50, filepath="") -> "args":
     """Init argparse module
     :param num_of_posts:
     :param filepath:

@@ -4,8 +4,10 @@ from datetime import datetime
 
 import psycopg2
 
+from AbcDatabase import AbcDatabase
 
-class PostgreDB:
+
+class PostgreDB(AbcDatabase):
 
     def __init__(self, filename='database.ini', section='postgresql'):
         self.db = {}
@@ -245,9 +247,10 @@ class PostgreDB:
 postgre_db = PostgreDB()
 
 postgre_db.insert_user('second_user', 'second_user_link', 2000, 200, 20, datetime(2021, 12, 12).strftime('%Y/%m/%d'))
-# postgre_db.insert_user('first_user', 1001, 11, datetime(2011, 1, 1).strftime('%Y/%m/%d'))
-# postgre_db.insert_user('new_user', 3000, 30, datetime(2020, 11, 11).strftime('%Y/%m/%d'))
-# postgre_db.insert_post("df8aef88", "second_user", "post_category", "post_link1", 22, 33, datetime.now().strftime('%Y/%m/%d'))
+postgre_db.insert_user('first_user', 'first_user_link', 1001, 101, 11, datetime(2011, 1, 1).strftime('%Y/%m/%d'))
+postgre_db.insert_user('new_user', 'new_user_link', 3000, 300, 30, datetime(2020, 11, 11).strftime('%Y/%m/%d'))
+
+postgre_db.insert_post("df8aef88", "second_user", "post_category",datetime.now().strftime('%Y/%m/%d'), 22, 33, "post_link1")
 # postgre_db.insert_post("df7aef87", "new_user", "category", "post_link4", 24, 32, datetime.now().strftime('%Y/%m/%d'))
 # postgre_db.insert_post("df6aef86", "first_user", "post_category", "post_link2", 22, 33, datetime.now().strftime('%Y/%m/%d'))
 #

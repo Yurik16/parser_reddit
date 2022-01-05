@@ -1,7 +1,11 @@
 import json
 import os
+import socketserver
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from typing import Tuple
+
+from AbcDatabase import AbcDatabase
 from db_postgre import PostgreDB
 
 base_path = os.path.dirname(__file__)
@@ -11,6 +15,11 @@ class StaticServer(BaseHTTPRequestHandler):
     """Simple HTTP server with CRUD operations. """
     time_str = str(datetime.now().strftime('%Y_%m_%d'))
     RESULT_FILENAME = f'reddit_{time_str}.txt'
+
+    def __init__(self, database: AbcDatabase, request: bytes, client_address: Tuple[str, int],
+                 server: socketserver.BaseServer):
+        super().__init__(request, client_address, server)
+        self.abstractDB = database()
 
     def _set_headers(self, content='text/html'):
         """Setting header to the headers buffer"""
@@ -60,15 +69,12 @@ class StaticServer(BaseHTTPRequestHandler):
             body_value = dict(list(json.loads(body).values())[0])
             body_loads = json.loads(body)
             str_type = str(type(json.loads(body).values()))
-            pg_database = PostgreDB()
-            pg_database.create_table_users()
-            pg_database.create_table_posts()
             # filter user`s attributes from request body
             user_atr = [val for key, val in body_value.items() if key.find("user_") != -1]
             # filter post`s attributes from request body
             post_atr = [val for key, val in body_value.items() if key.find("post_") != -1 or key.find("user_name") == 0]
-            pg_database.insert_user(*user_atr)
-            pg_database.insert_post(uid, *post_atr)
+            self.abstractDB.insert_user(*user_atr)
+            self.abstractDB.insert_post(uid, *post_atr)
             self.wfile.write((f'{uid}: {body_value}').encode("utf-8"))
 
     def do_DELETE(self):
@@ -155,6 +161,7 @@ class StaticServer(BaseHTTPRequestHandler):
 
 def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):
     server_address = ('', port)
+
     httpd = server_class(server_address, handler_class)
     print('Starting Server on port {}'.format(port))
     httpd.serve_forever()

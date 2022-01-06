@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import socketserver
@@ -11,15 +12,32 @@ from db_postgre import PostgreDB
 base_path = os.path.dirname(__file__)
 
 
+def argparse_init(database=PostgreDB) -> "args":
+    """Init argparse module
+    :param database: source database
+    :return: argparse module object
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--database", metavar="database", type=int, default=database,
+                        help="postgre or mongo - what database to use")
+
+    args = parser.parse_args()
+    return args
+
+
 class StaticServer(BaseHTTPRequestHandler):
     """Simple HTTP server with CRUD operations. """
     time_str = str(datetime.now().strftime('%Y_%m_%d'))
     RESULT_FILENAME = f'reddit_{time_str}.txt'
 
-    def __init__(self, database: AbcDatabase, request: bytes, client_address: Tuple[str, int],
+    def __init__(self, request: bytes, client_address: Tuple[str, int],
                  server: socketserver.BaseServer):
-        super().__init__(request, client_address, server)
-        self.abstractDB = database()
+        super(StaticServer, self).__init__(request, client_address, server)
+        self.args = argparse_init()
+        if isinstance(self.args.database, PostgreDB):
+            self.abstractDB = PostgreDB()
+        # elif isinstance(self.args.database, MongoDB):
+        #     self.abstractDB = MongoDB()
 
     def _set_headers(self, content='text/html'):
         """Setting header to the headers buffer"""
@@ -33,30 +51,30 @@ class StaticServer(BaseHTTPRequestHandler):
         url_end = self.path.split('/')[-1]
         if self.path == '/posts/':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
-                for each in fh:
-                    self.wfile.write(each.encode("utf-8"))
-                    self.wfile.write(f'\n'.encode("utf-8"))
+            result_list = self.abstractDB.get_all_entry()
+            for each in result_list:
+                self.wfile.write(each.encode("utf-8"))
+                self.wfile.write(f'\n'.encode("utf-8"))
         elif self.path == f'/posts/row/{url_end}':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
-                # write to response body row number 'row' from file handler 'fh'
-                try:
-                    self.wfile.write(fh.readlines()[int(url_end)].encode("utf-8"))
-                    self.send_response(201)
-                except (ValueError, IndexError) as ie:
-                    self.wfile.write((f'no entry - {ie}').encode("utf-8"))
-                    self.send_response(404)
+            result_list = self.abstractDB.get_all_entry()
+            # write to response body row number 'row' from file handler 'fh'
+            try:
+                self.wfile.write(result_list[int(url_end)].encode("utf-8"))
+                self.send_response(201)
+            except (ValueError, IndexError) as ie:
+                self.wfile.write((f'no entry - {ie}').encode("utf-8"))
+                self.send_response(404)
         elif self.path == f'/posts/{url_end}':
             self._set_headers('application/json')
-            with open(os.path.join(base_path, self.RESULT_FILENAME), 'r') as fh:
-                try:
-                    any_list = [line for line in fh if line.find(url_end) != -1]
-                    self.wfile.write(any_list[0].encode("utf-8"))
-                    self.send_response(201)
-                except (ValueError, IndexError) as ie:
-                    self.wfile.write((f'no entry - {ie}').encode("utf-8"))
-                    self.send_response(404)
+            result_list = self.abstractDB.get_all_entry()
+            try:
+                any_list = [line for line in result_list if line.find(url_end) != -1]
+                self.wfile.write(any_list[0].encode("utf-8"))
+                self.send_response(201)
+            except (ValueError, IndexError) as ie:
+                self.wfile.write((f'no entry - {ie}').encode("utf-8"))
+                self.send_response(404)
 
     def do_POST(self):
         """Handle POST request and saving body to txt file"""
@@ -159,12 +177,12 @@ class StaticServer(BaseHTTPRequestHandler):
             return file_as_str.find(var) > -1
 
 
-def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):
+def run(handler_class=StaticServer, server_class=HTTPServer, port=8000):
     server_address = ('', port)
-
     httpd = server_class(server_address, handler_class)
     print('Starting Server on port {}'.format(port))
     httpd.serve_forever()
 
 
-run()
+if __name__ == '__main__':
+    run()

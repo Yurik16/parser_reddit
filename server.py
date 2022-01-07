@@ -12,19 +12,6 @@ from db_postgre import PostgreDB
 base_path = os.path.dirname(__file__)
 
 
-def argparse_init(database=PostgreDB) -> "args":
-    """Init argparse module
-    :param database: source database
-    :return: argparse module object
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--database", metavar="database", type=int, default=database,
-                        help="postgre or mongo - what database to use")
-
-    args = parser.parse_args()
-    return args
-
-
 class StaticServer(BaseHTTPRequestHandler):
     """Simple HTTP server with CRUD operations. """
     time_str = str(datetime.now().strftime('%Y_%m_%d'))
@@ -32,12 +19,24 @@ class StaticServer(BaseHTTPRequestHandler):
 
     def __init__(self, request: bytes, client_address: Tuple[str, int],
                  server: socketserver.BaseServer):
-        super(StaticServer, self).__init__(request, client_address, server)
-        self.args = argparse_init()
-        if isinstance(self.args.database, PostgreDB):
+        self.args = self.argparse_init()
+        if self.args.database == 'postgre':
             self.abstractDB = PostgreDB()
-        # elif isinstance(self.args.database, MongoDB):
+        # elif self.args.database == 'mongo':
         #     self.abstractDB = MongoDB()
+        super(StaticServer, self).__init__(request, client_address, server)
+
+    @staticmethod
+    def argparse_init(database='postgre') -> "args":
+        """Init argparse module
+        :param database: source database
+        :return: argparse module object
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--database", metavar="database", type=str, default=database,
+                            help="'postgre' or 'mongo' - what database to use? default 'postgre'")
+        args = parser.parse_args()
+        return args
 
     def _set_headers(self, content='text/html'):
         """Setting header to the headers buffer"""

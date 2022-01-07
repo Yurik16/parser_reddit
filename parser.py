@@ -72,7 +72,7 @@ def get_content_from_main_page(html):
                 "post_category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
                 "post_date": (datetime.today() - timedelta(
                     int(post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text.split(' ')[0]))).strftime('%Y/%m/%d'),
-                "user_number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
+                "post_number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
                 "post_votes": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
                 "user_link": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE')['href'],
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']

@@ -244,16 +244,16 @@ class PostgreDB(AbcDatabase):
                 logging.warning(f'There is no such user_name in DB - {old_u_name}: {e}')
 
 
-postgre_db = PostgreDB()
-
-postgre_db.insert_user('second_user', 'second_user_link', 2000, 200, 20, datetime(2021, 12, 12).strftime('%Y/%m/%d'))
-postgre_db.insert_user('first_user', 'first_user_link', 1001, 101, 11, datetime(2011, 1, 1).strftime('%Y/%m/%d'))
-postgre_db.insert_user('new_user', 'new_user_link', 3000, 300, 30, datetime(2020, 11, 11).strftime('%Y/%m/%d'))
-
-postgre_db.insert_post("df8aef88", "second_user", "post_category",datetime.now().strftime('%Y/%m/%d'), 22, 33, "post_link1")
-# postgre_db.insert_post("df7aef87", "new_user", "category", "post_link4", 24, 32, datetime.now().strftime('%Y/%m/%d'))
-# postgre_db.insert_post("df6aef86", "first_user", "post_category", "post_link2", 22, 33, datetime.now().strftime('%Y/%m/%d'))
+# postgre_db = PostgreDB()
 #
+# postgre_db.insert_user('second_user', 'second_user_link', 2000, 200, 20, datetime(2021, 12, 12).strftime('%Y/%m/%d'))
+# postgre_db.insert_user('first_user', 'first_user_link', 1001, 101, 11, datetime(2011, 1, 1).strftime('%Y/%m/%d'))
+# postgre_db.insert_user('new_user', 'new_user_link', 3000, 300, 30, datetime(2020, 11, 11).strftime('%Y/%m/%d'))
+#
+# postgre_db.insert_post("df8aef88", "second_user", "post_category",datetime.now().strftime('%Y/%m/%d'), 22, 33, "post_link1")
+# postgre_db.insert_post("df7aef87", "new_user", "category", datetime.now().strftime('%Y/%m/%d'), 24, 32, "post_link2")
+# postgre_db.insert_post("df6aef86", "first_user", "post_category", datetime.now().strftime('%Y/%m/%d'), 22, 33, "post_link2")
+
 # print(postgre_db.get_all_entry())
 # new_entry = ['df6aef86', 3, 'category', 'link2', 111, 111, datetime.now().strftime('%Y/%m/%d')]
 # postgre_db.update_post('df6aef86', new_entry)

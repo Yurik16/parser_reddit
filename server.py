@@ -54,22 +54,11 @@ class StaticServer(BaseHTTPRequestHandler):
             for each in result_list:
                 self.wfile.write(each.encode("utf-8"))
                 self.wfile.write(f'\n'.encode("utf-8"))
-        elif self.path == f'/posts/row/{url_end}':
-            self._set_headers('application/json')
-            result_list = self.abstractDB.get_all_entry()
-            # write to response body row number 'row' from file handler 'fh'
-            try:
-                self.wfile.write(result_list[int(url_end)].encode("utf-8"))
-                self.send_response(201)
-            except (ValueError, IndexError) as ie:
-                self.wfile.write((f'no entry - {ie}').encode("utf-8"))
-                self.send_response(404)
         elif self.path == f'/posts/{url_end}':
             self._set_headers('application/json')
-            result_list = self.abstractDB.get_all_entry()
             try:
-                any_list = [line for line in result_list if line.find(url_end) != -1]
-                self.wfile.write(any_list[0].encode("utf-8"))
+                result_str = self.abstractDB.get_one_entry(url_end)
+                self.wfile.write(result_str.encode('utf-8'))
                 self.send_response(201)
             except (ValueError, IndexError) as ie:
                 self.wfile.write((f'no entry - {ie}').encode("utf-8"))

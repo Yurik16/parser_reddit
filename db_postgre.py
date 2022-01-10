@@ -156,10 +156,10 @@ class PostgreDB(AbcDatabase):
             cursor.execute(create_view)
             cursor.execute(cmd)
             result = cursor.fetchall()
-            to_list = [[f'{elem}' for elem in entry] for entry in result]
+            to_list = [', '.join(map(str, entry)) for entry in result]
             return to_list
 
-    def get_one_entry(self, uid: str) -> list:
+    def get_one_entry(self, uid: str) -> str:
         """
         Get data of one post from DataBase
         :param uid: unique id of post
@@ -176,8 +176,8 @@ class PostgreDB(AbcDatabase):
             try:
                 cursor.execute(cmd, (uid,))
                 result = cursor.fetchone()
-                to_list = [f'{elem}' for elem in result]
-                return to_list
+                result_as_str = ', '.join(map(str, result))
+                return result_as_str
             except Exception as e:
                 logging.warning(f'There is no such element in DB - {uid}: {e}')
 

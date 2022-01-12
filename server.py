@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import socketserver
+from collections import namedtuple
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Tuple
@@ -20,6 +21,7 @@ class StaticServer(BaseHTTPRequestHandler):
     def __init__(self, request: bytes, client_address: Tuple[str, int],
                  server: socketserver.BaseServer):
         self.args = self.argparse_init()
+
         if self.args.database == 'postgre':
             self.abstractDB = PostgreDB()
         # elif self.args.database == 'mongo':
@@ -35,6 +37,8 @@ class StaticServer(BaseHTTPRequestHandler):
         parser = argparse.ArgumentParser()
         parser.add_argument("--database", metavar="database", type=str, default=database,
                             help="'postgre' or 'mongo' - what database to use? default 'postgre'")
+        parser.add_argument("--port", metavar="port", type=int, default=8000,
+                            help="what port to use for HTTPserver")
         args = parser.parse_args()
         return args
 
@@ -72,16 +76,10 @@ class StaticServer(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             # get unique id by deserialize body and pick "data"-key
             uid = "".join(json.loads(body).keys())
-            body_value = dict(list(json.loads(body).values())[0])
-            body_loads = json.loads(body)
-            str_type = str(type(json.loads(body).values()))
-            # filter user`s attributes from request body
-            user_atr = [val for key, val in body_value.items() if key.find("user_") != -1]
-            # filter post`s attributes from request body
-            post_atr = [val for key, val in body_value.items() if key.find("post_") != -1 or key.find("user_name") == 0]
-            self.abstractDB.insert_user(*user_atr)
-            self.abstractDB.insert_post(uid, *post_atr)
-            self.wfile.write((f'{uid}: {body_value}').encode("utf-8"))
+            all_vars = get_all_sending_variables(body)
+            self.abstractDB.insert_user(*all_vars.user_atr)
+            self.abstractDB.insert_post(uid, *all_vars.post_atr)
+            self.wfile.write((f'{uid}: {self.abstractDB.get_one_entry(uid)}').encode("utf-8"))
 
     def do_DELETE(self):
         """Handle DELETE request"""
@@ -89,80 +87,45 @@ class StaticServer(BaseHTTPRequestHandler):
         uid = self.path.split('/')[-1]
         if self.path == f'/posts/{uid}':
             self._set_headers()
-            with open(self.RESULT_FILENAME, 'r+') as file:
-                if not self.is_uid_in_file(uid):
-                    self.wfile.write((f'entry {uid} - is missing').encode("utf-8"))
-                    self.send_response(404)
-                    return
-                # change position of cursor to start of file
-                file_as_list = file.readlines()
-                file.seek(0)
-                # cut file to cursor - erase all data
-                file.truncate()
-                # recreate all file but without entry what needs to delete
-                for line in file_as_list:
-                    if line.find(uid) == -1:
-                        file.write(line)
-                self.wfile.write((f'entry {uid} - now deleted').encode("utf-8"))
-                self.send_response(201)
+            self.abstractDB.delete_post(uid)
+            self.wfile.write((f'entry {uid} - now deleted').encode("utf-8"))
+            self.send_response(201)
 
     def do_PUT(self):
         """Handle PUT request. Replace pointed entry with given body request"""
         # save digits following by last '/' as variable
         uid = self.path.split('/')[-1]
-        if self.path == f'/posts/{uid}':
+        if self.path == f'/posts/{uid}' and is_uid(uid) and self.is_uid_in_data(uid):
             self._set_headers('application/json')
             content_length = int(self.headers['Content-length'])
             body = self.rfile.read(content_length)
-            with open(self.RESULT_FILENAME, 'r+') as file:
-                if self.is_uid(uid) and self.is_uid_in_file(uid):
-                    # change position of cursor to start of file
-                    file_as_list = file.readlines()
-                    file.seek(0)
-                    # cut file to cursor - erase all data
-                    file.truncate()
-                    # recreate all file from lines variable and replace looking uid/entry with given body
-                    for line in file_as_list:
-                        if line.find(uid) != -1:
-                            file.write(body.decode("utf-8") + ",\n")
-                        else:
-                            file.write(line)
-                    self.wfile.write((f'entry uid - {uid} - updated').encode("utf-8"))
-                    self.send_response(201)
-                else:
-                    self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf-8"))
-                    self.send_response(404)
+            all_vars = get_all_sending_variables(body)
+            self.abstractDB.update_user(uid, *all_vars.user_atr)
+            self.abstractDB.update_post(uid, *all_vars.post_atr)
+            self.wfile.write((f'entry uid - {uid} - updated').encode("utf-8"))
+            self.send_response(201)
+        else:
+            self.wfile.write((f'{uid} - there is no such uid at {self.RESULT_FILENAME}').encode("utf-8"))
+            self.send_response(404)
 
-    @staticmethod
-    def get_list_from_dict(data: dict) -> str:
-        """Convert dict to string
-        :param data: dict with parsing data
-        :return: None
-        """
-        # logging.info("Convert data to list")
-        result_str = "".join(f'{key};' +
-                             f' https://www.reddit.com/{val["post_link"]};' +
-                             f' {val["username"]};' +
-                             f' {val["total_karma"]};' +
-                             f' {val["cake_day"]};' +
-                             f' {val["link_karma"]};' +
-                             f' {val["comment_karma"]};' +
-                             f' {val["post_date"]};' +
-                             f' {val["Number_of_comments"]};' +
-                             f' {val["post_votes"]};' +
-                             f' {val["post_category"]};'
-                             for key, val in data.items()
-                             )
-        return result_str
+    def is_uid_in_data(self, var: str) -> bool:
+        all_entry = self.abstractDB.get_all_entry()
+        is_var_in = sum(len(elem) for elem in all_entry if elem.find(var) > -1)
+        return is_var_in > 0
 
-    @staticmethod
-    def is_uid(var: str) -> bool:
-        return (len(var) == 36) and (len(var.split("-")) == 5)
 
-    def is_uid_in_file(self, var: str) -> bool:
-        with open(self.RESULT_FILENAME, "r") as file:
-            file_as_str = file.read()
-            return file_as_str.find(var) > -1
+def is_uid(var: str) -> bool:
+    return (len(var) == 36) and (len(var.split("-")) == 5)
+
+
+def get_all_sending_variables(body: bytes) -> namedtuple:
+    body_value = dict(list(json.loads(body).values())[0])
+    # filter user`s attributes from request body
+    user_atr = [val for key, val in body_value.items() if key.find("user_") != -1]
+    # filter post`s attributes from request body
+    post_atr = [val for key, val in body_value.items() if key.find("post_") != -1 or key.find("user_name") == 0]
+    Variables = namedtuple('Variables', ['user_atr', 'post_atr'])
+    return Variables(user_atr, post_atr)
 
 
 def run(handler_class=StaticServer, server_class=HTTPServer, port=8000):

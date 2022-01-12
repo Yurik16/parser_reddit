@@ -55,7 +55,7 @@ class AbcDatabase(ABC):
         """
 
     def update_user(self, old_u_name: str, user_name: str, user_link: str, total_karma: int, comment_karma: int,
-                    cake_day: str) -> None:
+                    link_karma: int, cake_day: str) -> None:
         """
         Update user in gp_users
         :param old_u_name: user name searching for update
@@ -63,6 +63,7 @@ class AbcDatabase(ABC):
         :param user_link: new user_link
         :param total_karma: new total_karma
         :param comment_karma: new comment_karma
+        :param link_karma: new link_karma
         :param cake_day: new cake_day
         :return: None
         """

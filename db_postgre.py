@@ -270,6 +270,6 @@ if __name__ == '__main__':
     # print(postgre_db.get_all_entry())
     # new_entry = ['df6aef86', 3, 'category', 'link2', 111, 111, datetime.now().strftime('%Y/%m/%d')]
     # postgre_db.update_post('22222222-7240-11ec-af2b-b42e99d62b21', 51, 'SmileSmile', '2021-12-31', 500, 1500, '/r/gaming/comments/qvenew/LLLLLLLL/')
-    postgre_db.update_user('22222222-7240-11ec-af2b-b42e99d62b21', 'AAAAAAAA', '/user/AAAAAAAA/', 10000, 1000, 100, '2021-09-26')
+    # postgre_db.update_user('22222222-7240-11ec-af2b-b42e99d62b21', 'AAAAAAAA', '/user/AAAAAAAA/', 10000, 1000, 100, '2021-09-26')
     # # postgre_db.delete_post("df6aef86")
     # print(postgre_db.get_one_entry("df6aef86"))

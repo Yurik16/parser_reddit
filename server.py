@@ -7,7 +7,6 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Tuple
 
-from AbcDatabase import AbcDatabase
 from db_postgre import PostgreDB
 
 base_path = os.path.dirname(__file__)
@@ -56,7 +55,7 @@ class StaticServer(BaseHTTPRequestHandler):
             self._set_headers('application/json')
             result_list = self.abstractDB.get_all_entry()
             for each in result_list:
-                self.wfile.write(each.encode("utf-8"))
+                self.wfile.write(f'{each}  \n'.encode("utf-8"))
                 self.wfile.write(f'\n'.encode("utf-8"))
         elif self.path == f'/posts/{url_end}':
             self._set_headers('application/json')

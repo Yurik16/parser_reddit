@@ -20,3 +20,6 @@ trio==0.19.0
 trio-websocket==0.9.2
 urllib3==1.26.7
 wsproto==1.0.0
+
+bs4~=0.0.1
+SQLAlchemy~=1.4.28

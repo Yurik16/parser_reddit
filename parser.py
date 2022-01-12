@@ -68,11 +68,11 @@ def get_content_from_main_page(html):
             unique_id = str(uuid.uuid1())
             STORE_DATA_AS_DICT[unique_id] = []  # can use defaultDict(list)
             STORE_DATA_AS_DICT[unique_id].append({
-                "username": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
+                "user_name": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE').text[2:],
                 "post_category": post.find('a', class_='_3ryJoIoycVkA88fy40qNJc', text=True).text[2:],
                 "post_date": (datetime.today() - timedelta(
                     int(post.find('a', class_='_3jOxDPIQ0KaOWpzvSQo-1s').text.split(' ')[0]))).strftime('%Y/%m/%d'),
-                "Number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
+                "post_number_of_comments": post.find('a', class_='_2qww3J5KKzsD7e5DO0BvvU').text.split(' ')[0],
                 "post_votes": post.find('div', class_='_1rZYMD_4xY3gRcSS3p8ODO').text,
                 "user_link": post.find('a', class_='oQctV4n0yUb0uiHDdGnmE')['href'],
                 "post_link": post.find('a', class_='SQnoC3ObvgnGjWt90zD9Z')['href']
@@ -89,7 +89,10 @@ def get_content_from_main_page(html):
             continue
         try:
             payload = json.dumps(
-                {"data": {unique_id: STORE_DATA_AS_DICT[unique_id][0]}, "metadata": {"filepath": ARGS.filepath}})
+                # this for saving data at simple file
+                # {"data": {unique_id: STORE_DATA_AS_DICT[unique_id][0]}, "metadata": {"filepath": ARGS.filepath}}
+                {unique_id: STORE_DATA_AS_DICT[unique_id][0]}
+            )
             requests.post('http://localhost:8000/posts/', data=payload)
         except ConnectionError as ce:
             logging.warning(ce)
@@ -102,15 +105,15 @@ def get_users_data_from_json(u_id: str):
     """Getting users data from json response by making myself request
     :param u_id: uuid
     """
-    name = STORE_DATA_AS_DICT[u_id][0]["username"]
+    name = STORE_DATA_AS_DICT[u_id][0]["user_name"]
     url = f'https://www.reddit.com/user/{name}/about.json?'
     r = requests.get(url, params=None, headers=HEADERS)
     user_json = r.json()
     try:
-        STORE_DATA_AS_DICT[u_id][0]["total_karma"] = user_json["data"]["total_karma"]
-        STORE_DATA_AS_DICT[u_id][0]["comment_karma"] = user_json["data"]["comment_karma"]
-        STORE_DATA_AS_DICT[u_id][0]["link_karma"] = user_json["data"]["link_karma"]
-        STORE_DATA_AS_DICT[u_id][0]["cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime(
+        STORE_DATA_AS_DICT[u_id][0]["user_total_karma"] = user_json["data"]["total_karma"]
+        STORE_DATA_AS_DICT[u_id][0]["user_comment_karma"] = user_json["data"]["comment_karma"]
+        STORE_DATA_AS_DICT[u_id][0]["user_link_karma"] = user_json["data"]["link_karma"]
+        STORE_DATA_AS_DICT[u_id][0]["user_cake_day"] = datetime.fromtimestamp(user_json["data"]["created"]).strftime(
             '%Y/%m/%d %H:%M')
     except AttributeError:
         # Catch errors (content 18+) and throw it to next except
@@ -161,13 +164,13 @@ def get_list_from_dict(data: dict) -> list:
         if len(result_list) < ARGS.count:
             result_list.append(f'{key};' +
                                f' https://www.reddit.com/{val[0]["post_link"]};' +
-                               f' {val[0]["username"]};' +
-                               f' {val[0]["total_karma"]};' +
+                               f' {val[0]["user_name"]};' +
+                               f' {val[0]["user_total_karma"]};' +
                                f' {val[0]["cake_day"]};' +
                                f' {val[0]["link_karma"]};' +
                                f' {val[0]["comment_karma"]};' +
                                f' {val[0]["post_date"]};' +
-                               f' {val[0]["Number_of_comments"]};' +
+                               f' {val[0]["user_number_of_comments"]};' +
                                f' {val[0]["post_votes"]};' +
                                f' {val[0]["post_category"]}'
                                )
